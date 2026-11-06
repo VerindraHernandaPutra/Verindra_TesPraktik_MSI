@@ -55,6 +55,22 @@ Panduan ini membawa Anda dari folder kosong sampai aplikasi berjalan dan **27 uj
 
 > **Keamanan:** API key, client secret, dan token hanya diketik di `.env` atau di n8n. Jangan menempelnya ke chat, dokumen, atau screenshot. File `.env` tidak pernah di-commit.
 
+## Gambaran besar: komponen dan alasan memilihnya
+
+| Komponen | Dipakai untuk | Kenapa dipilih | Alternatif yang tidak dipilih |
+| --- | --- | --- | --- |
+| **n8n** (self-hosted) | Otak sistem: menerima permintaan, memanggil AI, membaca dan menulis data | Alur terlihat sebagai diagram sehingga bisa dirawat non-programmer; gratis dijalankan lokal; punya Code node untuk logika presisi | Make/Zapier (tidak bisa lokal, berbayar), Python murni (kurang visual) |
+| **Docker** | Menjalankan n8n dalam container | Satu perintah memasang n8n dengan versi yang sama di laptop mana pun; tidak mengotori sistem; data tersimpan di volume | Instal n8n lewat npm (versi Node bisa bentrok) |
+| **Google Sheets** | Database: KB, prospek, percakapan, draf, histori | Sesuai jobdesk Google Workspace; penilai bisa melihat data langsung; tanpa server database | PostgreSQL/Airtable (perlu setup tambahan) |
+| **Google Cloud Platform** | Memberi izin n8n membaca dan menulis Sheets atas nama akun Anda | Google mewajibkan setiap aplikasi yang memakai Sheets API terdaftar sebagai project dengan OAuth client; tanpa itu Google menolak akses | Service account (perlu membagikan sheet ke email robot; OAuth lebih sederhana untuk akun pribadi) |
+| **Claude API (Haiku 5.5)** | Menjawab pertanyaan dan menyusun draf | Murah dan cepat untuk tugas sempit (4 butir KB); patuh instruksi; mendukung structured outputs (JSON dijamin valid) | Model lebih besar (lebih mahal, tidak perlu untuk tugas ini) |
+| **Ollama** (opsional) | Model AI cadangan di laptop | Tetap jalan bila API tidak tersedia; data tidak keluar dari laptop | — |
+| **Python** | Script perakit, deploy, reset, dan uji | Sudah terpasang di banyak laptop; cukup pustaka bawaan, tanpa `pip install` | — |
+| **Node.js** | Uji unit kode JavaScript | Kode Code node n8n berupa JavaScript; Node menjalankannya di luar n8n untuk diuji | — |
+| **Git** | Riwayat perubahan | Satu commit per langkah; mudah kembali bila ada kesalahan | — |
+| **HTML + JavaScript biasa** | Halaman chat, panel, dashboard | Tanpa proses build; cukup dibuka lewat server lokal sederhana | React/Streamlit (lebih berat untuk lingkup ini) |
+
+
 ## Daftar isi
 
 - Langkah 0 – Pasang alat
@@ -70,6 +86,7 @@ Panduan ini membawa Anda dari folder kosong sampai aplikasi berjalan dan **27 uj
 - Langkah 10 – Isi data dan halaman web
 - Langkah 11 – Uji akhir (27/27)
 - Lampiran – Error yang mungkin muncul
+- Glosarium – Istilah teknis
 
 ---
 
@@ -85,6 +102,11 @@ Panduan ini membawa Anda dari folder kosong sampai aplikasi berjalan dan **27 uj
 | Ollama (opsional) | ollama.com | `ollama pull qwen2.5:3b` |
 
 Siapkan juga: **akun Google** pribadi dan **API key Claude** dari console.anthropic.com (menu *API Keys*, akun harus punya saldo).
+
+> **Kenapa?**
+> - **Akun Google pribadi** dipakai karena spreadsheet dan izin OAuth terikat ke akun; akun kantor sering dibatasi admin sehingga izin OAuth diblokir.
+> - **Saldo Claude** diperlukan karena API dibayar per token; seluruh uji dan demo hanya memakan sekitar beberapa sen dolar.
+
 
 > Di macOS/Linux, ganti `python` dengan `python3` pada semua perintah.
 
@@ -122,11 +144,23 @@ Buka `.env`, tempel hasil perintah pertama ke `N8N_ENCRYPTION_KEY=` dan hasil ke
 
 > Jangan pernah mengganti `N8N_ENCRYPTION_KEY` setelah kredensial dipasang di n8n; kredensial lama tidak akan bisa dibuka.
 
+> **Kenapa?**
+> - **`.env` terpisah dari kode** agar rahasia (kunci, token, ID) tidak ikut tersimpan di git; `.gitignore` memastikan git mengabaikannya, sedangkan `.env.example` menjadi contoh tanpa isi rahasia.
+> - **`N8N_ENCRYPTION_KEY`** adalah kunci yang dipakai n8n untuk mengenkripsi kredensial di database-nya. Bila kunci berganti, kredensial lama tidak bisa didekripsi.
+> - **`RESET_TOKEN`** melindungi endpoint uji yang bisa menghapus data demo; tanpa token yang benar n8n menolak dengan 403.
+
+
 ---
 
 ## Langkah 2 – Data seed
 
 Delapan file CSV, satu per sheet. Header harus persis seperti di bawah.
+
+> **Kenapa?**
+> - **Data awal disimpan sebagai CSV di repo** agar keadaan awal selalu bisa dipulihkan persis sama (reset seed) sebelum uji; hasil uji jadi bisa diulang dan dibandingkan.
+> - **Header harus persis** karena kode membaca kolom berdasarkan namanya; satu huruf berbeda membuat kolom dianggap tidak ada.
+> - **`kunci_normal`** (nama perusahaan tanpa \"PT\", \"Simulasi\", tanda baca) dipakai untuk mendeteksi prospek yang sama walau ejaannya berbeda.
+
 
 """)
     tambah(daftar_file(*[(f"seed/{n}.csv", d) for n, d in [
@@ -145,6 +179,12 @@ docker compose up -d
 
 **Titik cek:** buka **http://localhost:5678**. Isi form *Set up owner account* (akun lokal, tidak dikirim ke mana pun). Lewati survei atau tawaran lisensi.
 
+> **Kenapa?**
+> - **Port terikat ke `127.0.0.1`** (lihat docker-compose.yml) sehingga n8n hanya bisa dibuka dari laptop ini, tidak dari jaringan Wi-Fi atau internet.
+> - **Volume `n8n_data`** menyimpan workflow dan kredensial di luar container; mematikan atau memperbarui container tidak menghapus data.
+> - **Zona waktu Asia/Jakarta** agar waktu di Histori dan jadwal pengingat pukul 08.00 sesuai WIB.
+
+
 ---
 
 ## Langkah 4 – Google Cloud, spreadsheet, dan kredensial
@@ -160,12 +200,25 @@ docker compose up -d
    ```
 6. Simpan **Client ID** dan **Client Secret** sementara (jangan ke repo).
 
+> **Kenapa?**
+> - **Kenapa perlu Google Cloud Platform:** Google tidak mengizinkan program mana pun membaca atau menulis Sheets tanpa identitas aplikasi yang terdaftar. Project GCP adalah \"KTP\" aplikasi itu; OAuth client adalah cara aplikasi meminta izin dari pemilik akun.
+> - **Sheets API** dipakai untuk membaca dan menulis isi sheet; **Drive API** dipakai n8n untuk menampilkan daftar file spreadsheet saat memilih dokumen dan saat menguji kredensial.
+> - **OAuth (bukan memberikan password):** Anda login di halaman Google sendiri, lalu Google memberi n8n token akses terbatas. Password Google tidak pernah diketahui n8n, dan izin bisa dicabut kapan saja di myaccount.google.com.
+> - **Mode Testing + Test users:** aplikasi yang belum diverifikasi Google hanya boleh dipakai akun yang didaftarkan. Cukup untuk demo pribadi; peringatan \"Google hasn't verified this app\" wajar karena aplikasinya milik Anda sendiri. Token di mode Testing kedaluwarsa sekitar 7 hari; bila muncul error token, klik Sign in with Google lagi.
+> - **Redirect URI** adalah alamat tujuan Google mengirim token setelah Anda login. Harus sama persis dengan alamat n8n; kolom JavaScript origins tidak dipakai karena n8n tidak login dari peramban.
+
+
 **4.2 Spreadsheet**
 1. Di Google Sheets buat spreadsheet baru bernama `MSI Demo (SIMULASI)`.
 2. Buat **8 tab** dengan nama persis: `KB`, `Prospek`, `Percakapan`, `Antrean_Staf`, `Draf`, `Histori`, `Konfigurasi`, `Log_Error`. Tab boleh kosong; isinya ditulis otomatis di Langkah 10.
 3. Hapus tab bawaan *Sheet1* bila masih ada.
 4. Salin ID spreadsheet dari URL (bagian di antara `/d/` dan `/edit`) ke `.env`: `GOOGLE_SHEET_ID=...`
 5. Tombol *Share* → *General access* tetap **Restricted**.
+
+> **Kenapa?**
+> - **Satu spreadsheet, delapan tab** agar semua data demo ada di satu tempat dan bisa dibaca dalam satu panggilan API (lebih cepat).
+> - **Restricted** agar data hanya bisa dibuka akun Anda; ID spreadsheet saja tidak cukup untuk membukanya.
+
 
 **4.3 Kredensial di n8n** (Overview → panah di tombol *Create* → *Credential*). Ganti nama kredensial di kiri atas **persis** seperti ini:
 
@@ -177,13 +230,29 @@ docker compose up -d
 
 **Titik cek:** setiap kredensial menampilkan pesan hijau (*Connection tested successfully* / *Account connected*).
 
+> **Kenapa?**
+> - **Credential store n8n** menyimpan API key dan token Google terenkripsi di database n8n. Workflow hanya merujuk nama kredensial, sehingga file workflow di repo tidak pernah berisi rahasia.
+> - **Nama persis** dipakai agar mudah dikenali saat memasang di node; script deploy menyalin rujukan kredensial berdasarkan jenisnya.
+> - **`host.docker.internal`** adalah alamat laptop dilihat dari dalam container Docker; `localhost` di dalam container berarti container itu sendiri, bukan laptop.
+
+
 **4.4 API key n8n:** *Settings → n8n API → Create an API key* (label `msi-deploy-lokal`, centang semua scope *Workflow* bila ditanya). Tempel ke `.env`: `N8N_API_KEY=...`
+
+> **Kenapa?**
+> - **API key n8n** dipakai script deploy untuk memasang dan memperbarui workflow lewat n8n Public API, sehingga perubahan kode cukup satu perintah tanpa import manual setiap kali.
+
 
 ---
 
 ## Langkah 5 – Prompt dan skema AI
 
 Instruksi untuk Claude dan skema JSON jawaban. Penanda `[[...]]` diisi workflow saat berjalan.
+
+> **Kenapa?**
+> - **Prompt disimpan sebagai file**, bukan diketik di n8n, agar perubahannya tercatat git dan satu prompt dipakai di semua tempat (satu sumber kebenaran).
+> - **Penanda `[[DAFTAR_KB]]`** diisi isi sheet KB saat permintaan berjalan, sehingga admin cukup mengubah sheet tanpa mengubah prompt. Memakai `[[ ]]` karena `{{ }}` adalah sintaks ekspresi n8n.
+> - **Skema JSON (structured outputs)** membuat API Claude menjamin keluaran berformat JSON sesuai skema, sehingga workflow selalu bisa membacanya.
+
 
 """)
     tambah(daftar_file(
@@ -200,6 +269,12 @@ Instruksi untuk Claude dan skema JSON jawaban. Penanda `[[...]]` diisi workflow 
 ## Langkah 6 – Modul kode bersama + uji unit
 
 Kode JavaScript yang dipakai banyak workflow. Setiap modul punya file uji `*.test.js`.
+
+> **Kenapa?**
+> - **Pemeriksa jawaban tanpa AI:** aturan berbasis pola memberi hasil pasti dan bisa diuji; AI kedua untuk memeriksa AI pertama hasilnya tidak pasti.
+> - **Modul bersama** mencegah kode yang sama ditulis berulang di banyak workflow; perbaikan cukup di satu file.
+> - **Uji unit (`node --test`)** membuktikan logika benar sebelum masuk n8n, jauh lebih cepat daripada menguji lewat webhook.
+
 
 """)
     tambah(daftar_file(
@@ -230,6 +305,12 @@ Hasil yang benar di akhir keluaran: `pass 43` dan `fail 0`. Bila ada yang gagal,
 ## Langkah 7 – Kode setiap workflow
 
 Setiap file di bawah menjadi isi satu Code node di n8n. Folder menunjukkan workflow pemiliknya.
+
+> **Kenapa?**
+> - **Kode node ditulis sebagai file `.js`**, bukan langsung di editor n8n, agar bisa dibaca, dibandingkan, diuji, dan dilacak git. Script perakit menempelkannya ke workflow.
+> - **Satu baca dan satu tulis per permintaan:** semua sheet dibaca dalam satu panggilan dan semua perubahan ditulis dalam satu `batchUpdate`. Lebih cepat (sekitar 1 detik per panggilan Sheets) dan atomik: bila gagal, tidak ada data yang setengah tertulis.
+> - **`id_permintaan` (idempotensi):** permintaan yang sama dikirim ulang tidak membuat data dobel; hasil lama dikembalikan.
+
 
 ### WF-01 Agent chat (`POST /chat`)
 
@@ -288,6 +369,10 @@ Setiap file di bawah menjadi isi satu Code node di n8n. Folder menunjukkan workf
 
 **9.1 Rakit workflow**
 
+> **Kenapa?**
+> - **Workflow dirakit, bukan digambar manual,** karena workflow terdiri dari puluhan node; merakitnya dari file memastikan hasilnya selalu sama dan bisa diulang.
+
+
 ```powershell
 python scripts/build_workflows.py
 ```
@@ -295,12 +380,20 @@ python scripts/build_workflows.py
 **Titik cek:** enam baris `Ditulis:` muncul, yaitu WF-01 (33 node), WF-02 (13), WF-03 (51), WF-04 (16), WF-05 (5), WF-90 (34). Bila muncul "Nilai berikut belum diisi di .env", lengkapi `.env` (Langkah 1.3 dan 4).
 
 **9.2 Import WF-01 sekali secara manual** (agar script deploy punya contoh kredensial untuk diwariskan)
+
+> **Kenapa?**
+> - Kredensial hanya bisa dipilih dari n8n (isinya rahasia). Setelah satu node dipasangi kredensial, script deploy menyalin rujukan kredensial yang sama ke semua node dan workflow lain.
+
 1. Di n8n: *Create → Workflow* → menu **⋯** kanan atas → *Import from File* → pilih `n8n/workflows/WF-01_agent_chat.json`.
 2. Klik dua kali node **Baca Semua Sheet** → *Credential to connect with* → pilih `Google Sheets (demo)`.
 3. Klik dua kali node **Panggil Claude** → *Credential for Anthropic* → pilih `Claude API (demo)`.
 4. Klik **Save**. Jangan klik Publish dulu; node lain belum punya kredensial.
 
 **9.3 Pasang semua workflow**
+
+> **Kenapa?**
+> - **Publish** mengaktifkan alamat webhook (`/webhook/chat`, dan seterusnya) sehingga bisa dipanggil halaman web. WF-05 dipasang lebih dulu karena workflow lain merujuknya sebagai error workflow.
+
 
 ```powershell
 python scripts/deploy_workflows.py
@@ -315,6 +408,10 @@ python scripts/deploy_workflows.py
 ## Langkah 10 – Isi data dan halaman web
 
 **10.1 Isi spreadsheet dari seed** (ketik `RESET` saat diminta):
+
+> **Kenapa?**
+> - Reset menulis ulang kedelapan tab dari folder `seed/` dalam satu operasi atomik, termasuk header, sehingga tab kosong dari Langkah 4.2 langsung siap dipakai.
+
 
 ```powershell
 python scripts/reset_seed.py
@@ -339,6 +436,11 @@ python -m http.server 8000 --bind 127.0.0.1
 
 Buka **http://localhost:8000** (harus `localhost`, bukan `127.0.0.1`).
 
+> **Kenapa?**
+> - **Server lokal (`http.server`)** diperlukan karena peramban memblokir panggilan ke n8n dari file yang dibuka langsung (`file://`).
+> - **CORS:** n8n hanya mengizinkan halaman dari origin `http://localhost:8000` (nilai `WEB_ORIGIN` di `.env`). Bagi peramban, `127.0.0.1:8000` adalah origin lain, sehingga jawabannya diblokir.
+
+
 **Titik cek manual:**
 1. **Chat:** tanya `Apakah harus menjadi sponsor?` → jawaban dengan chip **KB03**. Tanya `Bisakah dijamin mendapat bintang 5?` → chip **KB04** + label kuning **Diteruskan ke staf**.
 2. **Panel staf:** tiket eskalasi dan draf menunggu tampil; coba **Setujui** lalu **Tandai Siap kirim (simulasi)**.
@@ -349,6 +451,11 @@ Buka **http://localhost:8000** (harus `localhost`, bukan `127.0.0.1`).
 ## Langkah 11 – Uji akhir (27/27)
 
 Buka terminal kedua di folder proyek (server halaman tetap berjalan):
+
+> **Kenapa?**
+> - **Uji dimulai dengan reset** agar setiap kali dijalankan hasilnya bisa dibandingkan (data awal sama); urutan uji mengikuti Section 13, misalnya ringkasan 3/3/3/1 diuji sebelum prospek baru ditambahkan.
+> - **Uji memeriksa isi sheet, bukan hanya respons**, sehingga kesalahan seperti data dobel atau baris yang tidak tertulis ikut tertangkap.
+
 
 ```powershell
 python scripts/run_tests.py
@@ -375,6 +482,30 @@ Penjelasan teknis setiap komponen dan bahan presentasi ada di `docs/PANDUAN_REPR
 
 """)
     tambah(bagian_error() + "\n")
+    tambah("""
+---
+
+## Glosarium – Istilah teknis
+
+| Istilah | Arti singkat |
+| --- | --- |
+| **API** | Pintu bagi program untuk meminta layanan program lain (mis. Claude API, Google Sheets API). |
+| **Webhook** | Alamat URL di n8n yang menjalankan workflow saat dipanggil, mis. `POST /webhook/chat`. |
+| **Workflow / node** | Workflow adalah alur kerja n8n; node adalah satu langkah di dalamnya (baca sheet, panggil AI, kode). |
+| **Code node** | Node n8n berisi JavaScript untuk logika yang presisi. |
+| **Credential store** | Tempat n8n menyimpan kunci dan token secara terenkripsi. |
+| **OAuth** | Cara aplikasi mendapat izin terbatas atas akun Anda tanpa mengetahui password. |
+| **Container / volume Docker** | Container menjalankan aplikasi terisolasi; volume menyimpan datanya agar tidak hilang. |
+| **System prompt** | Instruksi tetap untuk AI yang dikirim di setiap permintaan. |
+| **Knowledge base (KB)** | Daftar fakta resmi yang menjadi satu-satunya sumber jawaban agent. |
+| **Structured outputs** | Fitur API Claude yang menjamin keluaran mengikuti skema JSON. |
+| **Eskalasi** | Pertanyaan diteruskan ke staf manusia karena di luar wewenang agent. |
+| **Idempoten** | Permintaan yang sama diulang tidak mengubah hasil atau menambah data. |
+| **Atomik** | Sekumpulan perubahan diterapkan semua, atau tidak sama sekali. |
+| **CORS** | Aturan peramban yang membatasi halaman mana yang boleh membaca jawaban sebuah server. |
+| **Seed** | Data awal standar untuk mengembalikan sistem ke keadaan bersih. |
+| **Uji unit / uji ujung ke ujung** | Uji unit memeriksa satu fungsi; uji ujung ke ujung memeriksa seluruh alur lewat API sungguhan. |
+""")
 
     keluaran = ROOT / "docs/PANDUAN_LENGKAP.md"
     keluaran.write_text("".join(bagian), encoding="utf-8")
