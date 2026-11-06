@@ -528,7 +528,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-09 | S1 | Tab Chat di index.html + config.js | CC | Chip KB dan label eskalasi tampil; tombol nonaktif saat memuat | FR-01, FR-03 | Selesai |
 | BL-10 | S2 | WF-01 langkah 5: normalisasi kunci, upsert Prospek, tulis Histori | CC | Memasukkan P03 dua kali: total tetap 10, Histori mencatat duplikat | FR-08, FR-10 | Selesai |
 | BL-11 | S2 | WF-01 langkah 6–8: Percakapan, Antrean\_Staf, draf, idempotensi id\_permintaan | CC | Permintaan berulang mengembalikan hasil lama tanpa baris baru | FR-04, FR-06, FR-13 | Selesai |
-| BL-12 | S2 | WF-05, cabang error di node Sheets, MODE\_GAGAL; pesan gagal + Coba ulang di UI | CC | Uji gagal: status gagal tampil, tidak ada baris sukses, coba ulang tidak menggandakan data | FR-16, FR-17 | Belum |
+| BL-12 | S2 | WF-05, cabang error di node Sheets, MODE\_GAGAL; pesan gagal + Coba ulang di UI | CC | Uji gagal: status gagal tampil, tidak ada baris sukses, coba ulang tidak menggandakan data | FR-16, FR-17 | Selesai |
 | BL-13 | S2 | WF-03 setujui/tolak draf dan ubah status; tab Panel staf | CC | Draf hanya bisa Siap kirim (simulasi) setelah Disetujui; Histori tercatat | FR-09, FR-14 | Belum |
 | BL-14 | S3 | WF-02 GET /panel dan tab Dashboard | CC | Ringkasan 3/3/3/1 dan per AE 5/5 sama dengan isi sheet | FR-12 | Belum |
 | BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Belum |
@@ -600,8 +600,8 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-16 | Draf | Draf yang belum disetujui ditandai Siap kirim | Ditolak; status tetap Menunggu persetujuan | O | FR-14 | Belum diuji |
 | T-17 | Draf | Staf menyetujui draf, lalu menandai Siap kirim (simulasi) | Status Disetujui lalu Siap kirim (simulasi); Histori draf\_diputuskan | O | FR-14 | Belum diuji |
 | T-18 | Draf | Staf menolak draf dengan catatan | Status Ditolak; catatan tersimpan | O | FR-14 | Belum diuji |
-| T-19 | Keandalan | MODE\_GAGAL = TRUE, kirim pertanyaan | Respons status gagal; Percakapan tidak bertambah; Log\_Error bertambah | O | FR-16, FR-17 | Belum diuji |
-| T-20 | Keandalan | MODE\_GAGAL = FALSE, coba ulang dengan id\_permintaan yang sama | Sukses; tepat satu baris Percakapan untuk id\_permintaan itu | O | FR-16 | Belum diuji |
+| T-19 | Keandalan | MODE\_GAGAL = TRUE, kirim pertanyaan | Respons status gagal; Percakapan tidak bertambah; Log\_Error bertambah | O | FR-16, FR-17 | Lulus (6 Nov 2026): HTTP 502 status gagal; Tulis Semua Sheet tidak dijalankan, Percakapan tetap 6; Log_Error E0001 (node Cek Mode Gagal) |
+| T-20 | Keandalan | MODE\_GAGAL = FALSE, coba ulang dengan id\_permintaan yang sama | Sukses; tepat satu baris Percakapan untuk id\_permintaan itu | O | FR-16 | Lulus (6 Nov 2026): coba ulang id yang sama sukses, Percakapan 6 menjadi 7 (tepat satu baris C0007) |
 | T-21 | Keandalan | Kirim ulang id\_permintaan yang sudah sukses | Hasil lama dikembalikan; tidak ada baris baru di sheet mana pun | O | FR-16, NFR-04 | Lulus (6 Nov 2026): hasil lama dikembalikan (berulang), tanpa memanggil model dan tanpa baris baru |
 | T-22 | Dashboard | GET /panel sebagai admin pada seed bersih | Baru 3, Kualifikasi 3, Follow-up 3, Penawaran draf 1; AE A 5, AE B 5 | O | FR-07, FR-12 | Belum diuji |
 | T-23 | Pengingat | Jalankan WF-04 dengan TANGGAL\_SIMULASI 2026-11-06 | P03 terlewat; P07 jatuh tempo hari ini; P04 dan P10 tidak ditandai | M | FR-11 | Belum diuji |
