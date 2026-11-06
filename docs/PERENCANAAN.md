@@ -516,10 +516,10 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 
 | ID | Sprint | Item dan keluaran | Pelaksana | Selesai bila | Memenuhi | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| BL-01 | F2 | Struktur repo (web/, n8n/, scripts/, seed/, docs/), .gitignore, .env.example, kerangka README | CC | .env tercantum di .gitignore; README berisi langkah setup kosong | NFR-02, NFR-09 | Belum |
-| BL-02 | F2 | File seed CSV untuk semua sheet: Prospek P01–P10, KB, Konfigurasi, header sheet lain | CC | Hitungan status 3/3/3/1; header sama persis dengan Section 9 | FR-07, FR-18 | Belum |
+| BL-01 | F2 | Struktur repo (web/, n8n/, scripts/, seed/, docs/), .gitignore, .env.example, kerangka README | CC | .env tercantum di .gitignore; README berisi langkah setup kosong | NFR-02, NFR-09 | Selesai |
+| BL-02 | F2 | File seed CSV untuk semua sheet: Prospek P01–P10, KB, Konfigurasi, header sheet lain | CC | Hitungan status 3/3/3/1; header sama persis dengan Section 9 | FR-07, FR-18 | Selesai |
 | BL-03 | F2 | Google Spreadsheet 8 sheet dan impor seed | K | Semua sheet terisi; spreadsheet tidak dibagikan publik | FR-07 | Belum |
-| BL-04 | F2 | docker-compose.yml untuk n8n, dengan catatan alamat Ollama host.docker.internal | CC | n8n terbuka di localhost:5678 | NFR-09 | Belum |
+| BL-04 | F2 | docker-compose.yml untuk n8n, dengan catatan alamat Ollama host.docker.internal | CC | n8n terbuka di localhost:5678 | NFR-09 | Selesai |
 | BL-05 | F2 | Jalankan n8n, buat kredensial Claude API, Google Sheets, dan Ollama (opsional) | K | Gate G2: workflow uji bisa membaca dan menulis Sheets | NFR-02 | Belum |
 | BL-06 | S1 | System prompt agent (AR-01–AR-08) dengan sisipan KB, di n8n/prompts/ | CC | Prompt meminta keluaran JSON sesuai Section 7 | FR-02, FR-03 | Belum |
 | BL-07 | S1 | Kode pemeriksa jawaban PJ-01–PJ-04 untuk Code node, beserta uji unitnya | CC | Uji unit lulus untuk contoh nominal uang, tanggal, kata janji, rujukan kosong | FR-05 | Belum |
