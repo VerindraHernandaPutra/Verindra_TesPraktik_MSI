@@ -194,7 +194,7 @@ docker compose up -d
 2. *APIs & Services → Library*: aktifkan **Google Sheets API** dan **Google Drive API**.
 3. *Google Auth Platform*: isi nama aplikasi `MSI Demo` dan email Anda, Audience **External**, selesaikan.
 4. *Audience → Test users → Add users*: masukkan **Gmail yang sama** dengan yang akan dipakai login. *Publishing status* tetap **Testing**.
-5. *Clients → Create client* → **Web application**. Kolom **Authorized JavaScript origins** dibiarkan kosong. Di **Authorized redirect URIs** tambahkan persis:
+5. *Clients → Create client* → **Web application** (rincian klik dan penjelasan di 4.1a dan 4.1b di bawah). Kolom **Authorized JavaScript origins** dibiarkan kosong. Di **Authorized redirect URIs** tambahkan persis:
    ```
    http://localhost:5678/rest/oauth2-credential/callback
    ```
@@ -207,6 +207,89 @@ docker compose up -d
 > - **Mode Testing + Test users:** aplikasi yang belum diverifikasi Google hanya boleh dipakai akun yang didaftarkan. Cukup untuk demo pribadi; peringatan \"Google hasn't verified this app\" wajar karena aplikasinya milik Anda sendiri. Token di mode Testing kedaluwarsa sekitar 7 hari; bila muncul error token, klik Sign in with Google lagi.
 > - **Redirect URI** adalah alamat tujuan Google mengirim token setelah Anda login. Harus sama persis dengan alamat n8n; kolom JavaScript origins tidak dipakai karena n8n tidak login dari peramban.
 
+
+
+### 4.1a Memahami OAuth dan *Authorized redirect URIs*
+
+Bagian ini menjelaskan apa yang sebenarnya terjadi saat Anda menekan **Sign in with Google** di n8n, dan kenapa satu alamat di Google Cloud harus diisi persis.
+
+**Analogi.** Bayangkan n8n adalah kurir yang ingin mengambil paket (data Sheets) dari gudang Google atas nama Anda.
+- **Project GCP + OAuth client** = kartu identitas kurir yang terdaftar di gudang (Client ID = nomor kartu, Client Secret = PIN kurir).
+- **Login dan layar persetujuan Google** = Anda sendiri datang ke meja gudang dan menandatangani surat kuasa ("kurir ini boleh mengambil paket Sheets saya").
+- **Authorized redirect URI** = **alamat kantor kurir yang terdaftar**. Gudang hanya mau mengantar surat kuasa ke alamat yang tercatat di kartu, bukan ke alamat lain yang disebut siapa pun.
+
+**Alur lengkap OAuth (yang terjadi di balik layar):**
+
+```
+ Anda                n8n (localhost:5678)                 Google
+  │  klik "Sign in     │                                     │
+  │  with Google" ───► │                                     │
+  │                    │ 1. buka halaman login Google,       │
+  │                    │    membawa Client ID + redirect_uri │
+  │ ◄──────────────────┼──────────────────────────────────── │
+  │ 2. login & setujui izin (layar persetujuan)              │
+  │ ─────────────────────────────────────────────────────►   │
+  │                    │                                     │ 3. Google memeriksa: apakah redirect_uri
+  │                    │                                     │    terdaftar PERSIS di OAuth client?
+  │                    │ ◄── 4. peramban diarahkan ke        │
+  │                    │     http://localhost:5678/rest/oauth2-credential/callback?code=...
+  │                    │ 5. n8n menukar code + Client Secret │
+  │                    │    menjadi access token & refresh   │
+  │                    │    token ─────────────────────────► │
+  │                    │ ◄──────────────────────── token ─── │
+  │                    │ 6. token disimpan terenkripsi di    │
+  │                    │    credential store → "Account connected"
+```
+
+Langkah 4 adalah tempat redirect URI bekerja: setelah Anda menyetujui, Google mengirim **kode izin sekali pakai** dengan cara mengarahkan peramban ke alamat itu. n8n "mendengarkan" di alamat tersebut, menangkap kodenya, lalu menukarnya menjadi token.
+
+**Bedah alamat callback:**
+
+| Bagian | Nilai | Arti |
+| --- | --- | --- |
+| Skema | `http://` | Google mengizinkan `http` khusus untuk `localhost`; alamat lain wajib `https` |
+| Host | `localhost` | Laptop Anda sendiri |
+| Port | `:5678` | Port n8n (lihat `docker-compose.yml`) |
+| Path | `/rest/oauth2-credential/callback` | "Pintu" khusus n8n untuk menerima kode OAuth |
+
+**Kenapa harus sama persis?** Ini fitur keamanan. Kode izin bisa ditukar menjadi akses ke Sheets Anda. Kalau Google mau mengirim kode ke alamat mana saja, penyerang bisa memasang tautan login dengan `redirect_uri` miliknya lalu mencuri kode tersebut. Karena itu Google hanya mengirim ke alamat yang **didaftarkan pemilik aplikasi**, dan membandingkannya huruf demi huruf: `localhost` ≠ `127.0.0.1`, port berbeda ditolak, garis miring di akhir pun dihitung.
+
+**Beda dengan *Authorized JavaScript origins*:**
+
+| Kolom | Dipakai bila | Format | Untuk proyek ini |
+| --- | --- | --- | --- |
+| Authorized JavaScript origins | Login Google dilakukan oleh JavaScript di halaman web (mis. tombol "Login with Google" di situs) | Hanya `skema://host:port`, **tanpa path** | **Kosongkan** |
+| Authorized redirect URIs | Server (di sini n8n) menerima kode OAuth di sebuah alamat | URL lengkap **dengan path** | `http://localhost:5678/rest/oauth2-credential/callback` |
+
+Menempelkan URL callback ke kolom origins menghasilkan error *"Invalid Origin: URIs must not contain a path or end with /"*.
+
+**Dari mana alamat itu didapat?** n8n menampilkannya sendiri: buka form kredensial **Google Sheets OAuth2 API** di n8n, cari kolom **OAuth Redirect URL** (ada tombol salin). Salin dari sana agar pasti sama. Bila suatu saat n8n dijalankan di port atau domain lain, alamat ini berubah dan harus didaftarkan ulang di Google Cloud.
+
+### 4.1b Klik demi klik: membuat OAuth client
+
+1. Buka **console.cloud.google.com** dan pastikan project `msi-demo` terpilih di pemilih project (kiri atas).
+2. Menu ☰ → **Google Auth Platform** (atau *APIs & Services → OAuth consent screen*, nama menu bisa berbeda antarversi konsol).
+3. **Branding**: isi *App name* `MSI Demo`, *User support email* dan *Developer contact* dengan email Anda → **Save**.
+4. **Audience**: pilih **External**. Di *Test users* klik **+ Add users** → isi Gmail yang akan dipakai login → **Save**. *Publishing status* biarkan **Testing**.
+5. **Clients** → **+ Create client**:
+   - *Application type*: **Web application**
+   - *Name*: `n8n lokal`
+   - *Authorized JavaScript origins*: **biarkan kosong**
+   - *Authorized redirect URIs*: klik **+ Add URI** → tempel `http://localhost:5678/rest/oauth2-credential/callback`
+   - klik **Create**
+6. Jendela berisi **Client ID** dan **Client Secret** muncul. Salin keduanya langsung ke form kredensial n8n (Langkah 4.3). Jangan simpan di repo, chat, atau screenshot. Bila jendela terlanjur ditutup, buka client tersebut; Client Secret bisa dibuat ulang.
+
+**Izin (scope) yang diminta:** n8n meminta sendiri izin yang dibutuhkan saat Sign in; daftarnya tampil di layar persetujuan Google. Anda tidak perlu mengatur *Data Access* untuk mode Testing.
+
+**Masalah umum di tahap ini:**
+
+| Pesan | Penyebab | Perbaikan |
+| --- | --- | --- |
+| `Error 400: redirect_uri_mismatch` | Alamat di Authorized redirect URIs tidak sama persis dengan OAuth Redirect URL di n8n | Salin ulang dari kolom **OAuth Redirect URL** n8n; periksa `localhost` vs `127.0.0.1`, port, dan garis miring akhir; simpan; tunggu 1–5 menit lalu coba lagi |
+| *Invalid Origin: URIs must not contain a path* | URL callback ditempel di kolom JavaScript origins | Kosongkan origins; isi di redirect URIs |
+| *Akses diblokir: aplikasi belum menyelesaikan proses verifikasi* | Akun login belum ada di Test users | Tambahkan Gmail yang sama di Audience → Test users |
+| *Google hasn't verified this app* | Wajar untuk aplikasi milik sendiri di mode Testing | Klik **Continue** |
+| Kredensial n8n tiba-tiba error token setelah beberapa hari | Refresh token mode Testing kedaluwarsa sekitar 7 hari | Buka kredensial di n8n → **Sign in with Google** lagi |
 
 **4.2 Spreadsheet**
 1. Di Google Sheets buat spreadsheet baru bernama `MSI Demo (SIMULASI)`.

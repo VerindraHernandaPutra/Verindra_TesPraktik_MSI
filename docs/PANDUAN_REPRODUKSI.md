@@ -185,6 +185,7 @@ Urutan ini mengikuti commit di `git log --reverse`. Untuk melihat persis apa yan
 | Gejala | Penyebab | Solusi |
 | --- | --- | --- |
 | Google: "Invalid Origin: URIs must not contain a path or end with /" | URL callback ditempel di **Authorized JavaScript origins** | Kosongkan origins; isi callback di **Authorized redirect URIs** |
+| Google: `Error 400: redirect_uri_mismatch` | Alamat Authorized redirect URIs tidak sama persis dengan OAuth Redirect URL di n8n | Salin dari kolom OAuth Redirect URL n8n; cek localhost vs 127.0.0.1, port, garis miring akhir; tunggu 1–5 menit |
 | Google: "Akses diblokir: aplikasi belum menyelesaikan proses verifikasi" | Akun login belum terdaftar sebagai Test user | Audience → Test users → tambahkan Gmail yang sama; status tetap Testing |
 | Claude 400 karena `temperature` | Haiku 5.5 menolak parameter sampling | Hapus `temperature`; pakai `output_config.effort` + structured outputs |
 | "halo" dijawab template eskalasi | PJ-04 mewajibkan rujukan untuk jawaban tanpa eskalasi | Topik `sapaan` + pengecualian berpenjaga pola pertanyaan pengguna |
