@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "topik": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["biaya_pendaftaran", "sponsorship", "jaminan_penghargaan", "tarif", "jadwal", "lainnya"]
+      }
+    },
+    "jawaban": { "type": "string" },
+    "rujukan_kb": { "type": "array", "items": { "type": "string" } },
+    "eskalasi": { "type": "boolean" },
+    "alasan_eskalasi": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+  },
+  "required": ["topik", "jawaban", "rujukan_kb", "eskalasi", "alasan_eskalasi"],
+  "additionalProperties": false
+}
