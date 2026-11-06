@@ -4,14 +4,14 @@ Nov 6, 2026 · @ren
 
 ## 0. Info dokumen
 
-Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.2 (versi 1.1 disetujui kandidat pada 6 November 2026); target selesai Sabtu, 7 November malam.
+Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.3, disesuaikan dengan implementasi (versi 1.1 disetujui kandidat pada 6 November 2026); target selesai Sabtu, 7 November malam.
 
 | Atribut | Isi |
 | --- | --- |
 | Nama proyek | AI Agent Layanan & CRM Awards (Simulasi MSI) |
 | Kode proyek | MSI-A1A6 |
 | Tugas yang dicakup | A1 sebagai demo utama (perilaku agent) + A6 (database dan pipeline) |
-| Versi | 1.2 (disetujui kandidat) |
+| Versi | 1.3 (disesuaikan dengan implementasi) |
 | Pembaca | Claude Code di VS Code (pelaksana), kandidat (pengawas dan penanggung jawab), penilai MSI (lampiran laporan A7) |
 | Tools utama | n8n, Google Sheets, API model AI, halaman web sederhana |
 | Batas pengumpulan | Senin, 9 November 2026 menurut formulir; PDF panduan menyebut Jumat, 6 November 2026. Perlu konfirmasi ke panitia. |
@@ -62,6 +62,7 @@ Kolom Visual menunjukkan exhibit yang direncanakan; section tanpa kebutuhan visu
 
 | Tanggal | Versi | Perubahan | Oleh |
 | --- | --- | --- | --- |
+| 6 Nov 2026 | 1.3 | Disesuaikan dengan implementasi: (1) NFR-07 dan tech stack, Claude Haiku 5.5 menolak parameter temperature sehingga konsistensi dijaga dengan effort rendah dan structured outputs (T-08 lulus); (2) KA-05 sampai KA-07, baca dan tulis Sheets lewat satu panggilan API atomik per permintaan, workflow dirakit dari sumber di repo dan dipasang lewat n8n Public API, WF-90 utilitas uji; (3) kontrak API, keputusan siap\_kirim di /approve, kolom berulang di /chat, data tambahan dan ekspor di /panel, endpoint POST /pengingat; (4) struktur repo dan panduan staf | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.2 | Topik sapaan ditambahkan ke FR-02 dan pengecualian sapaan ke PJ-04: balasan salam atau pertanyaan identitas (AR-04) sebelumnya selalu ditolak pemeriksa karena tidak punya rujukan KB. Pengecualian hanya berlaku bila pertanyaan pengguna sendiri berupa sapaan pendek | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.1 | FR-23, BL-22, dan T-30 ditambahkan: AE membuat draf penawaran AI dari catatan CRM, agar A6 terpenuhi tanpa bergantung pada alur chat A1 | Kandidat, dibantu Claude |
 | 6 Nov 2026 | 1.0 | Semua section disetujui (gate G1); jadwal dipadatkan agar selesai Sabtu, 7 November malam | Kandidat, dibantu Claude |
@@ -252,7 +253,7 @@ Dua belas kebutuhan non-fungsional mengatur seberapa aman, andal, dan mudah dira
 | NFR-04 | Keandalan | Permintaan yang diulang tidak menambah baris; setiap kegagalan tertangkap jalur error | Uji duplikasi dan uji gagal simpan | Must |
 | NFR-05 | Ketertelusuran | Setiap perubahan data dan keputusan persetujuan punya jejak siapa dan kapan | Sheet histori terisi setelah uji | Must |
 | NFR-06 | Kinerja | Jawaban agent tampil dalam 10 detik atau kurang pada kondisi normal | Stopwatch saat uji, dicatat di Section 13 | Should |
-| NFR-07 | Konsistensi | Model agent memakai temperature rendah (0–0,2) agar jawaban sama antar uji | Pertanyaan yang sama dijalankan 3 kali | Should |
+| NFR-07 | Konsistensi | Jawaban agent stabil antar uji: effort rendah dan structured outputs untuk Claude (Haiku 5.5 menolak parameter temperature); temperature 0,1 untuk Ollama | Pertanyaan yang sama dijalankan 3 kali | Should |
 | NFR-08 | Kemudahan perawatan | Setiap node n8n diberi nama dan catatan; workflow diekspor sebagai JSON ke repo | Pemeriksaan isi repo | Should |
 | NFR-09 | Portabilitas | Berjalan lokal dengan Docker atau npx tanpa layanan berbayar wajib; langkah setup muat di satu halaman README | Setup ulang dari README di folder bersih | Should |
 | NFR-10 | Biaya | Pemakaian API dalam kuota gratis atau trial; batas token per jawaban diatur | Dasbor penyedia API setelah uji | Should |
@@ -333,8 +334,8 @@ Halaman web tidak pernah memegang API key; semua kredensial hanya ada di n8n. De
 | Lapisan | Pilihan | Alasan | Alternatif yang tidak dipilih |
 | --- | --- | --- | --- |
 | Orkestrasi | n8n self-hosted lewat Docker | Alur visual yang bisa dirawat non-programmer, gratis dijalankan lokal, punya Code node untuk logika presisi | Make atau Zapier (tidak bisa lokal); Python murni (sudah terwakili di portofolio Bagian C) |
-| Model AI | Claude Haiku 5.5 lewat API (utama; Sonnet 5.5 bila kepatuhan kurang); Ollama lokal (cadangan); temperature 0–0,2 | Didukung node bawaan n8n dan bisa diminta keluaran JSON | Gemini atau OpenAI (kandidat memilih Claude) |
-| Data | Google Sheets, satu spreadsheet berisi beberapa sheet | Sesuai jobdesk Google Workspace, mudah diperiksa penilai, tanpa server database | PostgreSQL atau Airtable (perlu setup tambahan) |
+| Model AI | Claude Haiku 5.5 lewat API (utama; Sonnet 5.5 bila kepatuhan kurang); Ollama lokal (cadangan); effort rendah + structured outputs (Claude), temperature 0,1 (Ollama) | Didukung node bawaan n8n dan bisa diminta keluaran JSON | Gemini atau OpenAI (kandidat memilih Claude) |
+| Data | Google Sheets, satu spreadsheet berisi beberapa sheet, diakses lewat Google Sheets API (satu baca dan satu batchUpdate atomik per permintaan) | Sesuai jobdesk Google Workspace, mudah diperiksa penilai, tanpa server database | PostgreSQL atau Airtable (perlu setup tambahan) |
 | Antarmuka | Satu halaman HTML + JavaScript tanpa framework | Cepat dibuat Claude Code, tanpa proses build, cukup dibuka di peramban | React atau Streamlit (lebih berat untuk lingkup ini) |
 | Pemeriksa jawaban | n8n Code node (JavaScript) | Aturan PJ-01–PJ-04 berjalan pasti tanpa AI | Pemeriksaan oleh AI kedua (hasil tidak pasti) |
 | Uji otomatis | Script Python yang memanggil webhook | Uji bisa diulang dengan satu perintah dan memakai keahlian Python kandidat | Uji manual saja |
@@ -349,6 +350,9 @@ Halaman web tidak pernah memegang API key; semua kredensial hanya ada di n8n. De
 | KA-02 | Halaman chat dibuat sendiri, bukan chat bawaan n8n | Diputuskan | Satu halaman untuk chat dan panel; chat bawaan n8n menjadi cadangan jika waktu habis |
 | KA-03 | Penulisan bersamaan ke Sheets tidak dikunci | Diterima sebagai batasan | Demo dijalankan satu pengguna; untuk produksi perlu database dengan transaksi |
 | KA-04 | Workflow disimpan sebagai file JSON di repo | Diputuskan | Claude Code tidak bisa mengklik kanvas n8n, tetapi bisa menulis JSON yang di-import kandidat |
+| KA-05 | Satu baca (spreadsheets.get) dan satu tulis (spreadsheets.batchUpdate) per permintaan | Diputuskan | Node Sheets satu per satu butuh sekitar 1 detik per panggilan; batchUpdate diterapkan atomik sehingga kegagalan tidak meninggalkan data setengah tertulis. Respons turun ke 6–8 detik |
+| KA-06 | Workflow dirakit dari sumber dan dipasang lewat API | Diputuskan | scripts/build\_workflows.py merakit prompt, kode Code node, dan .env menjadi JSON; scripts/deploy\_workflows.py memasangnya lewat n8n Public API dan mempertahankan kredensial |
+| KA-07 | WF-90 utilitas uji (reset seed, ubah Konfigurasi, baca data) | Diputuskan | Dipakai run\_tests.py; dilindungi Header Auth X-Reset-Token yang hanya ada di .env dan credential store n8n |
 
 ## 9. Desain data
 
@@ -433,10 +437,11 @@ Langkah 5–8 berada di zona tulis: jika salah satu gagal, atau MODE\_GAGAL akti
 | ID | Pemicu | Fungsi | Sprint | Memenuhi |
 | --- | --- | --- | --- | --- |
 | WF-01 Agent chat | Webhook POST /chat | Menjawab dari KB, memeriksa jawaban, mencatat prospek dan percakapan, membuat tiket dan draf | S1–S2 | FR-01–06, FR-08, FR-10, FR-13, FR-16, FR-18 |
-| WF-02 Data panel | Webhook GET /panel | Mengembalikan prospek, ringkasan dashboard, antrean, draf menunggu, dan pengingat sesuai peran | S2–S3 | FR-12, FR-15, FR-19 |
+| WF-02 Data panel | Webhook GET /panel | Mengembalikan prospek, ringkasan dashboard, antrean, draf menunggu dan disetujui, pengingat, tindak lanjut mendatang, dan data ekspor CSV sesuai peran | S2–S3 | FR-12, FR-15, FR-19 |
 | WF-03 Keputusan dan status | Webhook POST /approve, POST /prospek/status, dan POST /prospek/draf | Menyetujui atau menolak draf, mengubah status prospek, membuat draf penawaran AI dari catatan AE, menulis Histori | S2 | FR-09, FR-14, FR-23 |
-| WF-04 Pengingat harian | Schedule Trigger pukul 08.00 dan tombol jalankan manual | Menandai prospek dengan tgl\_tindak\_lanjut sama dengan atau sebelum TANGGAL\_SIMULASI | S3 | FR-11 |
-| WF-05 Penanganan error | Error Trigger dan cabang error di setiap node Sheets | Menulis Log\_Error; memastikan WF-01 merespons status gagal | S2 | FR-16, FR-17 |
+| WF-04 Pengingat harian | Schedule Trigger pukul 08.00, tombol jalankan manual, dan webhook POST /pengingat | Menandai prospek dengan tgl\_tindak\_lanjut sama dengan atau sebelum TANGGAL\_SIMULASI | S3 | FR-11 |
+| WF-05 Penanganan error | Error Trigger (error workflow untuk semua workflow) | Menulis Log\_Error untuk kegagalan yang lolos dari jalur gagal; jalur gagal di tiap workflow menulis Log\_Error sendiri dan merespons status gagal | S2 | FR-16, FR-17 |
+| WF-90 Reset seed (utilitas uji) | Webhook POST /reset-seed, POST /uji/konfigurasi, GET /uji/data dengan Header Auth | Menulis ulang sheet dari seed/, mengubah MODE\_GAGAL/MODEL\_AI/TANGGAL\_SIMULASI, membaca isi sheet untuk run\_tests.py | F3 | Section 13 |
 
 ### Kontrak API (webhook)
 
@@ -444,17 +449,18 @@ Halaman web hanya berbicara dengan n8n lewat kontrak ini, jadi bagian depan dan 
 
 | Endpoint | Masukan | Keluaran sukses | Ditolak atau gagal bila |
 | --- | --- | --- | --- |
-| POST /chat | id\_permintaan, prospek (ID P01–P10 atau nama), pertanyaan | status ok, jawaban, rujukan\_kb, eskalasi, id\_prospek, id\_draf | Pertanyaan kosong; penulisan gagal → status gagal, pesan, id\_permintaan |
-| GET /panel | peran: staf, ae\_a, ae\_b, atau admin | prospek, ringkasan per status dan per AE, antrean, draf menunggu, pengingat | Peran tidak dikenal |
-| POST /approve | id\_draf, keputusan (setuju atau tolak), catatan, oleh | status ok, status\_draf baru | Draf tidak berstatus Menunggu persetujuan; peran bukan staf |
+| POST /chat | id\_permintaan, prospek (ID P01–P10 atau nama), pertanyaan | status ok, jawaban, rujukan\_kb, eskalasi, id\_prospek, id\_draf; berulang: true bila id\_permintaan sudah tercatat | Pertanyaan kosong; penulisan gagal → status gagal, pesan, id\_permintaan |
+| GET /panel | peran: staf, ae\_a, ae\_b, atau admin | prospek, ringkasan per status dan per AE, antrean, draf menunggu, draf disetujui, pengingat, tindak lanjut mendatang; ekspor=1 menambah baris lengkap Prospek dan Histori | Peran tidak dikenal |
+| POST /approve | id\_draf, keputusan (setuju, tolak, atau siap\_kirim), catatan (wajib untuk tolak), oleh | status ok, status\_draf baru | Setuju/tolak bukan dari Menunggu persetujuan; siap\_kirim bukan dari Disetujui; peran bukan staf |
 | POST /prospek/status | id\_prospek, status\_baru, oleh | status ok, isi Histori | Status di luar daftar Section 9; AE mengubah prospek milik AE lain |
 | POST /prospek/draf | id\_prospek, catatan, oleh | status ok, id\_draf, isi\_draf berstatus Menunggu persetujuan | Catatan kosong; AE meminta draf untuk prospek milik AE lain |
+| POST /pengingat | (kosong) | status ok, daftar prospek yang ditandai, jumlah sel berubah | — |
 
 ### Aturan keandalan
 
-- **Upsert dengan kunci alami:** Prospek per kunci\_normal, Percakapan per id\_permintaan, Antrean\_Staf dan Draf per id\_percakapan.
+- **Satu tulis atomik:** keberadaan data dicek dari hasil baca (Prospek per kunci\_normal, Percakapan per id\_permintaan), lalu semua baris baru dan perubahan sel ditulis dalam satu spreadsheets.batchUpdate. Kegagalan sebelum langkah tulis tidak meninggalkan data apa pun.
 - **Idempoten:** jika id\_permintaan sudah ada di Percakapan, WF-01 mengembalikan hasil lama tanpa menulis apa pun.
-- **Cabang error eksplisit:** setiap node Google Sheets memakai opsi lanjut lewat keluaran error, lalu diarahkan ke WF-05.
+- **Cabang error eksplisit:** setiap node HTTP dan Code memakai keluaran error menuju jalur gagal (Log\_Error lalu respons status gagal); WF-05 menjadi error workflow untuk kegagalan tak terduga.
 - **MODE\_GAGAL:** bila bernilai TRUE, WF-01 memicu error buatan tepat sebelum langkah 5, untuk memperagakan uji kegagalan.
 - **Tanpa pengiriman:** tidak ada node email, WhatsApp, atau pesan keluar di workflow mana pun.
 
@@ -877,15 +883,18 @@ msi-a1a6-demo/
     PANDUAN_STAF.md
   seed/                 (CSV per sheet)
   n8n/
-    workflows/          (WF-01 … WF-05 dalam JSON)
-    prompts/            (system prompt agent dan draf)
-    code/               (pemeriksa jawaban, normalisasi kunci)
+    workflows/          (WF-01 … WF-05 dan WF-90 dalam JSON, hasil build)
+    prompts/            (system prompt agent, draf follow-up, draf penawaran, skema JSON)
+    code/               (modul bersama + uji unit; wf01/ … wf90/ untuk Code node per workflow)
   web/
     index.html
     config.js
   scripts/
+    build_workflows.py  (merakit workflow dari sumber)
+    deploy_workflows.py (memasang workflow lewat n8n Public API)
     run_tests.py
     reset_seed.py
+  bukti/                (hasil run_tests.py; tidak di-commit)
 ```
 
 ### Catatan teknis setup
