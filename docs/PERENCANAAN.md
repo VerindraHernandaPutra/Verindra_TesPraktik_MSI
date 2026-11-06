@@ -521,7 +521,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-03 | F2 | Google Spreadsheet 8 sheet dan impor seed | K | Semua sheet terisi; spreadsheet tidak dibagikan publik | FR-07 | Selesai |
 | BL-04 | F2 | docker-compose.yml untuk n8n, dengan catatan alamat Ollama host.docker.internal | CC | n8n terbuka di localhost:5678 | NFR-09 | Selesai |
 | BL-05 | F2 | Jalankan n8n, buat kredensial Claude API, Google Sheets, dan Ollama (opsional) | K | Gate G2: workflow uji bisa membaca dan menulis Sheets | NFR-02 | Selesai |
-| BL-06 | S1 | System prompt agent (AR-01–AR-08) dengan sisipan KB, di n8n/prompts/ | CC | Prompt meminta keluaran JSON sesuai Section 7 | FR-02, FR-03 | Belum |
+| BL-06 | S1 | System prompt agent (AR-01–AR-08) dengan sisipan KB, di n8n/prompts/ | CC | Prompt meminta keluaran JSON sesuai Section 7 | FR-02, FR-03 | Selesai |
 | BL-07 | S1 | Kode pemeriksa jawaban PJ-01–PJ-04 untuk Code node, beserta uji unitnya | CC | Uji unit lulus untuk contoh nominal uang, tanggal, kata janji, rujukan kosong | FR-05 | Belum |
 | BL-08 | S1 | WF-01 langkah 1–4 dan 9 sebagai JSON; kandidat meng-import dan memasang kredensial | CC + K | Tiga pertanyaan uji menghasilkan jawaban dan rujukan sesuai Section 7 | FR-01–FR-04, FR-18 | Belum |
 | BL-09 | S1 | Tab Chat di index.html + config.js | CC | Chip KB dan label eskalasi tampil; tombol nonaktif saat memuat | FR-01, FR-03 | Belum |
