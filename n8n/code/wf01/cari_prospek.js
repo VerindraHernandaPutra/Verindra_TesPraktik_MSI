@@ -4,11 +4,9 @@
 const masukan = $('Validasi Masukan').first().json;
 const identitas = masukan.prospek;
 
-// alwaysOutputData mengirim satu item kosong bila sheet hanya berisi header; abaikan.
-const daftar = $('Baca Prospek')
-  .all()
-  .map((i) => i.json)
-  .filter((r) => String(r.id_prospek || '').trim() !== '');
+const daftar = $('Olah Data Sheet')
+  .first()
+  .json.tabel.Prospek.filter((r) => String(r.id_prospek || '').trim() !== '');
 
 function tolak(pesan) {
   return [{ json: { valid: false, pesan, identitas } }];

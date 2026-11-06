@@ -4,7 +4,10 @@ const body = $input.first().json.body || {};
 
 const pertanyaan = String(body.pertanyaan ?? '').trim();
 const prospek = String(body.prospek ?? '').trim();
-const idPermintaan = String(body.id_permintaan ?? '').trim();
+// id_permintaan dipakai untuk idempotensi; bila klien tidak mengirimnya, buat satu (tanpa idempotensi).
+const idPermintaan =
+  String(body.id_permintaan ?? '').trim() ||
+  'srv-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
 
 const pesan = [];
 if (!pertanyaan) pesan.push('Pertanyaan tidak boleh kosong.');

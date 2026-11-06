@@ -1,6 +1,7 @@
-// WF-01 node "Ambil Teks Model" (KA-01). Mode: Run Once for All Items.
+// WF-01 node "Ambil Teks Model" dan "Ambil Teks Draf" (KA-01). Mode: Run Once for All Items.
 // Menyamakan bentuk respons Claude dan Ollama menjadi satu teks keluaran.
-const ctx = $('Susun Prompt').first().json;
+// NODE_KONTEKS: node yang memuat model_ai ("Susun Prompt" atau "Susun Prompt Draf"), diisi saat dirakit.
+const ctx = $(/*@NODE_KONTEKS*/ null).first().json;
 const r = $input.first().json;
 
 let teks = '';

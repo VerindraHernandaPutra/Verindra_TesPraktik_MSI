@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "isi_draf": { "type": "string" },
+    "rujukan_kb": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["isi_draf", "rujukan_kb"],
+  "additionalProperties": false
+}

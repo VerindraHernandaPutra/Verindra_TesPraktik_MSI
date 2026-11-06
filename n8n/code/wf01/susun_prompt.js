@@ -7,19 +7,18 @@ const CFG = /*@CFG*/ null; // { model_claude, model_ollama }
 const masukan = $('Validasi Masukan').first().json;
 
 // FR-18: KB dibaca ulang dari sheet setiap permintaan; hanya baris aktif = TRUE.
-const kb = $('Baca KB')
-  .all()
-  .map((i) => i.json)
-  .filter((r) => String(r.aktif).trim().toUpperCase() === 'TRUE' && String(r.kode || '').trim() !== '');
+const T = $('Olah Data Sheet').first().json.tabel;
+const kb = T.KB.filter((r) => String(r.aktif).trim().toUpperCase() === 'TRUE' && String(r.kode || '').trim() !== '');
 if (kb.length === 0) throw new Error('Sheet KB tidak berisi butir aktif.');
 
 const konfig = {};
-for (const i of $('Baca Konfigurasi').all()) {
-  konfig[String(i.json.kunci || '').trim()] = String(i.json.nilai ?? '').trim();
+for (const r of T.Konfigurasi) {
+  konfig[String(r.kunci || '').trim()] = String(r.nilai ?? '').trim();
 }
 
 const daftarKb = kb.map((r) => `- ${r.kode} | ${r.tindakan} | ${r.topik} | ${r.isi}`).join('\n');
-const system = SYSTEM_PROMPT.replace('[[DAFTAR_KB]]', daftarKb);
+// Fungsi pengganti dipakai agar karakter "$" di isi KB tidak ditafsirkan oleh String.replace.
+const system = SYSTEM_PROMPT.replace('[[DAFTAR_KB]]', () => daftarKb);
 const modelAi = String(konfig.MODEL_AI || 'claude').toLowerCase() === 'ollama' ? 'ollama' : 'claude';
 
 // Claude Haiku 5.5 menolak parameter temperature; konsistensi dijaga lewat effort rendah
@@ -48,6 +47,7 @@ return [
     json: {
       ...masukan,
       model_ai: modelAi,
+      daftar_kb: daftarKb,
       kode_kb_valid: kb.map((r) => String(r.kode).trim()),
       body_model: modelAi === 'ollama' ? bodyOllama : bodyClaude,
     },
