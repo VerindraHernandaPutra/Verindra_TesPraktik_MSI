@@ -1,0 +1,143 @@
+{
+  "name": "WF-05 Penanganan error",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1e820e0c-efc1-58c6-b17c-467bfa56f9d3",
+      "name": "Terima Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "notes": "Error Trigger: dijalankan n8n saat workflow yang memasang WF-05 sebagai error workflow gagal."
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-05 node \"Siapkan Log Error\" (FR-16). Mode: Run Once for All Items.\n// Error Trigger menangkap kegagalan tak terduga di workflow yang memasang WF-05 sebagai error workflow.\nconst e = $input.first().json || {};\nconst eksekusi = e.execution || {};\n\nreturn [\n  {\n    json: {\n      workflow: (e.workflow && e.workflow.name) || 'tidak diketahui',\n      node: eksekusi.lastNodeExecuted || '',\n      error: eksekusi.error || { message: 'Kesalahan tanpa pesan.' },\n      // Error Trigger tidak membawa body permintaan; cukup ID eksekusi untuk ditelusuri di n8n.\n      masukan: { id_permintaan: eksekusi.id ? 'eksekusi ' + eksekusi.id : '' },\n    },\n  },\n];\n"
+      },
+      "id": "5be15bce-137b-5a27-b7a0-16dcddacd010",
+      "name": "Siapkan Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "notes": "FR-16. Jaring pengaman untuk kegagalan yang tidak tertangkap jalur gagal di WF-01.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "0a4d0555-06e7-51b8-90b8-20af2be5aff8",
+      "name": "Baca Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "notes": "Nomor id_error berikutnya dan urutan kolom.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna; teks pertanyaan dipotong.\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {\n    id_permintaan: m.id_permintaan || '',\n    prospek: m.prospek || '',\n    pertanyaan: potong(m.pertanyaan || '', 200),\n  };\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
+      },
+      "id": "4b4d1d1f-7c4b-5d4a-bf1f-d1ad572cf94f",
+      "name": "Susun Baris Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_append) }}"
+      },
+      "id": "b6f17b63-8bb0-5fca-9963-253013955623",
+      "name": "Catat Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "notes": "Menambah satu baris ke sheet Log_Error.",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Terima Error": {
+      "main": [
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Log Error": {
+      "main": [
+        [
+          {
+            "node": "Baca Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Log Error": {
+      "main": [
+        [
+          {
+            "node": "Susun Baris Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Baris Log": {
+      "main": [
+        [
+          {
+            "node": "Catat Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

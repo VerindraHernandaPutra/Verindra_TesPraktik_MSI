@@ -5,9 +5,11 @@ Alur: build dulu (python scripts/build_workflows.py), lalu:
     python scripts/deploy_workflows.py WF-01      # hanya file yang namanya diawali WF-01
 
 - Workflow dicari berdasarkan nama ("WF-01 Agent chat", dst.).
-- Kredensial yang sudah dipasang di n8n disalin ke node bernama sama, jadi tidak perlu dipilih ulang.
+- Kredensial yang sudah dipasang di n8n disalin ke node bernama sama. Node baru memakai rujukan
+  kredensial sejenis yang sudah dipakai workflow mana pun di n8n (isi kredensial tidak pernah dibaca).
+- Rujukan "@WF:<nama workflow>" diganti dengan ID workflow tersebut; file tanpa rujukan dipasang lebih dulu.
 - Jika workflow sudah di-publish, n8n otomatis mem-publish versi baru (perilaku PUT /workflows/{id}).
-- Workflow baru dibuat dalam keadaan belum di-publish; pasang kredensialnya di n8n lalu publish.
+- Workflow baru dibuat dalam keadaan belum di-publish.
 
 Butuh N8N_API_KEY di .env (n8n: Settings > n8n API > Create an API key). Key tidak pernah dicetak.
 """
@@ -15,6 +17,7 @@ Butuh N8N_API_KEY di .env (n8n: Settings > n8n API > Create an API key). Key tid
 from __future__ import annotations
 
 import json
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -22,7 +25,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TIPE_BUTUH_KREDENSIAL = {"n8n-nodes-base.googleSheets"}
+POLA_RUJUKAN = re.compile(r"@WF:([^\"]+)")
 
 
 def baca_env() -> dict[str, str]:
@@ -56,30 +59,22 @@ class N8n:
                 isi = r.read()
                 return json.loads(isi) if isi else {}
         except urllib.error.HTTPError as e:
-            pesan = e.read().decode(errors="replace")[:500]
+            pesan = e.read().decode(errors="replace")[:600]
             sys.exit(f"n8n API {metode} {path} gagal: HTTP {e.code} {pesan}")
         except urllib.error.URLError as e:
             sys.exit(f"Tidak dapat menghubungi n8n di {self.url}: {e.reason}. Apakah n8n berjalan?")
 
-    def cari_workflow(self, nama: str) -> dict | None:
-        cocok, kursor = [], None
+    def semua_workflow(self) -> list[dict]:
+        hasil, kursor = [], None
         while True:
             q = {"limit": "100"}
             if kursor:
                 q["cursor"] = kursor
-            hasil = self.panggil("GET", "/workflows?" + urllib.parse.urlencode(q))
-            cocok += [w for w in hasil.get("data", []) if w.get("name") == nama and not w.get("isArchived")]
-            kursor = hasil.get("nextCursor")
+            res = self.panggil("GET", "/workflows?" + urllib.parse.urlencode(q))
+            hasil += [w for w in res.get("data", []) if not w.get("isArchived")]
+            kursor = res.get("nextCursor")
             if not kursor:
-                break
-        if len(cocok) > 1:
-            sys.exit(f'Ada {len(cocok)} workflow bernama "{nama}" di n8n. Arsipkan duplikatnya dulu.')
-        return self.panggil("GET", f"/workflows/{cocok[0]['id']}") if cocok else None
-
-
-def butuh_kredensial(node: dict) -> bool:
-    p = node.get("parameters", {})
-    return node["type"] in TIPE_BUTUH_KREDENSIAL or p.get("authentication") == "predefinedCredentialType"
+                return hasil
 
 
 def jenis_kredensial(node: dict, tersedia: dict[str, dict]) -> str | None:
@@ -89,62 +84,90 @@ def jenis_kredensial(node: dict, tersedia: dict[str, dict]) -> str | None:
     elif node["type"] == "n8n-nodes-base.googleSheets":
         calon = ["googleSheetsOAuth2Api", "googleApi"]
     else:
-        calon = []
-    return next((c for c in calon if c in tersedia), None)
+        return None
+    return next((c for c in calon if c in tersedia), calon[0] if calon else None)
 
 
-def deploy(api: N8n, file: Path) -> None:
-    baru = json.loads(file.read_text(encoding="utf-8"))
-    nama = baru["name"]
-    body = {k: baru[k] for k in ("name", "nodes", "connections", "settings")}
-    lama = api.cari_workflow(nama)
+class Pemasang:
+    def __init__(self, api: N8n) -> None:
+        self.api = api
+        self.workflow = {w["name"]: w for w in api.semua_workflow()}
+        # Rujukan kredensial per jenis dari seluruh workflow (hanya {id, name}, bukan isi kredensial).
+        self.per_jenis: dict[str, dict] = {}
+        for w in self.workflow.values():
+            for n in w.get("nodes", []):
+                for jenis, rujukan in (n.get("credentials") or {}).items():
+                    self.per_jenis.setdefault(jenis, rujukan)
 
-    if lama is None:
-        dibuat = api.panggil("POST", "/workflows", body)
-        print(f'[{nama}] dibuat (id {dibuat["id"]}), belum di-publish.')
-        perlu = [n["name"] for n in baru["nodes"] if butuh_kredensial(n)]
-        if perlu:
-            print("  Pasang kredensial di n8n untuk node: " + ", ".join(perlu) + "; lalu klik Publish.")
-        return
+    def ganti_rujukan(self, body: dict) -> dict:
+        teks = json.dumps(body, ensure_ascii=False)
 
-    kredensial_lama = {n["name"]: n["credentials"] for n in lama["nodes"] if n.get("credentials")}
-    # Rujukan kredensial per jenis (mis. googleSheetsOAuth2Api) untuk node baru; isi kredensial tidak pernah dibaca.
-    per_jenis: dict[str, dict] = {}
-    for kred in kredensial_lama.values():
-        for jenis, rujukan in kred.items():
-            per_jenis.setdefault(jenis, rujukan)
+        def ke_id(m: re.Match) -> str:
+            nama = m.group(1)
+            if nama not in self.workflow:
+                sys.exit(f'Rujukan @WF:{nama} tidak ditemukan di n8n. Pasang workflow "{nama}" lebih dulu.')
+            return self.workflow[nama]["id"]
 
-    tanpa, diwarisi = [], []
-    for n in body["nodes"]:
-        if n["name"] in kredensial_lama:
-            n["credentials"] = kredensial_lama[n["name"]]
-        elif butuh_kredensial(n):
-            jenis = jenis_kredensial(n, per_jenis)
-            if jenis:
-                n["credentials"] = {jenis: per_jenis[jenis]}
+        return json.loads(POLA_RUJUKAN.sub(ke_id, teks))
+
+    def pasang_kredensial(self, nodes: list[dict], lama: dict | None) -> tuple[list[str], list[str]]:
+        kred_lama = {n["name"]: n["credentials"] for n in (lama or {}).get("nodes", []) if n.get("credentials")}
+        diwarisi, tanpa = [], []
+        for n in nodes:
+            if n["name"] in kred_lama:
+                n["credentials"] = kred_lama[n["name"]]
+                continue
+            jenis = jenis_kredensial(n, self.per_jenis)
+            if jenis is None:
+                continue
+            if jenis in self.per_jenis:
+                n["credentials"] = {jenis: self.per_jenis[jenis]}
                 diwarisi.append(n["name"])
             else:
                 tanpa.append(n["name"])
+        return diwarisi, tanpa
 
-    hasil = api.panggil("PUT", f"/workflows/{lama['id']}", body)
-    terbit = bool(hasil.get("activeVersionId")) and hasil.get("activeVersionId") == hasil.get("versionId")
-    status = "versi baru sudah di-publish" if terbit else "disimpan sebagai draf (workflow belum di-publish)"
-    print(f"[{nama}] diperbarui (id {lama['id']}): {status}; kredensial dipertahankan di {len(kredensial_lama)} node.")
-    if diwarisi:
-        print("  Node baru memakai kredensial sejenis yang sudah terpasang: " + ", ".join(diwarisi))
-    if tanpa:
-        print("  Node baru tanpa kredensial, pasang di n8n: " + ", ".join(tanpa))
+    def deploy(self, file: Path) -> None:
+        baru = json.loads(file.read_text(encoding="utf-8"))
+        nama = baru["name"]
+        body = self.ganti_rujukan({k: baru[k] for k in ("name", "nodes", "connections", "settings")})
+        ringkas = self.workflow.get(nama)
+        lama = self.api.panggil("GET", f"/workflows/{ringkas['id']}") if ringkas else None
+        diwarisi, tanpa = self.pasang_kredensial(body["nodes"], lama)
+
+        if lama is None:
+            hasil = self.api.panggil("POST", "/workflows", body)
+            print(f'[{nama}] dibuat (id {hasil["id"]}).')
+        else:
+            hasil = self.api.panggil("PUT", f"/workflows/{lama['id']}", body)
+            print(f"[{nama}] diperbarui (id {lama['id']}).")
+        self.workflow[nama] = hasil
+
+        terbit = bool(hasil.get("activeVersionId")) and hasil.get("activeVersionId") == hasil.get("versionId")
+        # Error workflow wajib punya versi ter-publish agar bisa dipasang sebagai errorWorkflow.
+        # Error Trigger tidak membuka alamat apa pun, jadi aman di-publish otomatis.
+        if not terbit and any(n["type"] == "n8n-nodes-base.errorTrigger" for n in body["nodes"]) and not tanpa:
+            self.api.panggil("POST", f"/workflows/{hasil['id']}/publish", {})
+            terbit = True
+        print("  Status: " + ("versi terbaru sudah di-publish." if terbit else "belum di-publish; klik Publish di n8n bila sudah siap."))
+        if diwarisi:
+            print("  Kredensial sejenis dipasang otomatis untuk node: " + ", ".join(diwarisi))
+        if tanpa:
+            print("  Node tanpa kredensial, pasang manual di n8n: " + ", ".join(tanpa))
 
 
 def main() -> None:
     env = baca_env()
     api = N8n(env.get("N8N_API_URL", "http://localhost:5678/api/v1"), env["N8N_API_KEY"])
     awalan = sys.argv[1:] or [""]
-    files = sorted(f for f in (ROOT / "n8n/workflows").glob("*.json") if any(f.name.startswith(a) for a in awalan))
+    files = [f for f in (ROOT / "n8n/workflows").glob("*.json") if any(f.name.startswith(a) for a in awalan)]
     if not files:
         sys.exit("Tidak ada file workflow yang cocok di n8n/workflows/. Jalankan build_workflows.py dulu.")
+    # File yang dirujuk workflow lain dipasang lebih dulu.
+    files.sort(key=lambda f: (bool(POLA_RUJUKAN.search(f.read_text(encoding="utf-8"))), f.name))
+    pemasang = Pemasang(api)
     for f in files:
-        deploy(api, f)
+        pemasang.deploy(f)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,10 @@ Sumber:
   .env                ID spreadsheet, nama model, alamat Ollama, origin halaman web
 
 Keluaran:
-  n8n/workflows/WF-01_agent_chat.json   siap di-import atau dipasang dengan deploy_workflows.py
+  n8n/workflows/WF-01_agent_chat.json         siap dipasang dengan deploy_workflows.py
+  n8n/workflows/WF-05_penanganan_error.json   error workflow untuk WF-01 (Log_Error)
+
+Rujukan antar-workflow ditulis sebagai "@WF:<nama workflow>"; deploy_workflows.py menggantinya dengan ID asli.
 
 Jalankan dari akar repo:  python scripts/build_workflows.py
 Kredensial TIDAK ditulis ke file; dipilih di n8n atau diwarisi saat deploy.
@@ -72,8 +75,11 @@ def isi_penanda(kode: str, nilai: dict[str, object]) -> str:
     return kode
 
 
+_AWALAN_ID = ["WF-01"]  # diganti saat membangun workflow lain agar ID node unik per workflow
+
+
 def node_id(nama: str) -> str:
-    return str(uuid.uuid5(NAMESPACE, "WF-01/" + nama))
+    return str(uuid.uuid5(NAMESPACE, _AWALAN_ID[0] + "/" + nama))
 
 
 # ---------- pembuat node ----------
@@ -92,8 +98,12 @@ def node(nama: str, tipe: str, versi: float, posisi: tuple[int, int], parameter:
     return hasil
 
 
-def code_node(nama: str, posisi: tuple[int, int], kode: str, catatan: str) -> dict:
-    return node(nama, "n8n-nodes-base.code", 2, posisi, {"jsCode": kode}, catatan)
+def code_node(
+    nama: str, posisi: tuple[int, int], kode: str, catatan: str, on_error: str | None = "continueErrorOutput"
+) -> dict:
+    """on_error: continueErrorOutput (keluaran ke-2 = jalur gagal), continueRegularOutput, atau None."""
+    lain = {"onError": on_error} if on_error else {}
+    return node(nama, "n8n-nodes-base.code", 2, posisi, {"jsCode": kode}, catatan, **lain)
 
 
 def if_benar(nama: str, posisi: tuple[int, int], ekspresi: str, catatan: str) -> dict:
@@ -142,6 +152,7 @@ def http(
     body_expr: str | None = None,
     header: dict[str, str] | None = None,
     timeout: int = 30000,
+    on_error: str = "continueErrorOutput",
 ) -> dict:
     parameter: dict = {"method": metode, "url": url, "options": {"timeout": timeout}}
     if kredensial:
@@ -152,7 +163,7 @@ def http(
         )
     if body_expr:
         parameter.update({"sendBody": True, "specifyBody": "json", "jsonBody": body_expr})
-    return node(nama, "n8n-nodes-base.httpRequest", 4.2, posisi, parameter, catatan, onError="continueErrorOutput")
+    return node(nama, "n8n-nodes-base.httpRequest", 4.2, posisi, parameter, catatan, onError=on_error)
 
 
 def panggil_claude(nama: str, posisi: tuple[int, int], catatan: str) -> dict:
@@ -191,9 +202,34 @@ def hubung(*pasangan: tuple[str, int, str]) -> dict:
     return koneksi
 
 
+def jalur_log(sid: str, x: int, y: int, kode_siapkan: str, catatan_siapkan: str) -> list[dict]:
+    """Siapkan Log Error > Baca Log Error > Susun Baris Log > Catat Log Error.
+    Semua memakai continueRegularOutput: kegagalan mencatat log tidak menghentikan respons gagal."""
+    url_baca = SHEETS_API + sid + "/values/" + urllib.parse.quote("Log_Error!A:F")
+    url_append = (
+        SHEETS_API + sid + "/values/" + urllib.parse.quote("Log_Error!A1")
+        + ":append?valueInputOption=RAW&insertDataOption=INSERT_ROWS"
+    )
+    kode_susun = isi_penanda(
+        gabung("n8n/code/log_error.js", "n8n/code/susun_baris_log.js"), {"NODE_SUMBER": "Siapkan Log Error"}
+    )
+    return [
+        code_node("Siapkan Log Error", (x, y), kode_siapkan, catatan_siapkan, on_error="continueRegularOutput"),
+        http("Baca Log Error", (x + 220, y), "GET", url_baca, "Nomor id_error berikutnya dan urutan kolom.",
+             kredensial="googleSheetsOAuth2Api", on_error="continueRegularOutput"),
+        code_node("Susun Baris Log", (x + 440, y), kode_susun,
+                  "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+                  on_error="continueRegularOutput"),
+        http("Catat Log Error", (x + 660, y), "POST", url_append, "Menambah satu baris ke sheet Log_Error.",
+             kredensial="googleSheetsOAuth2Api", body_expr="={{ JSON.stringify($json.body_append) }}",
+             on_error="continueRegularOutput"),
+    ]
+
+
 # ---------- WF-01 ----------
 
 def bangun_wf01(env: dict[str, str]) -> dict:
+    _AWALAN_ID[0] = "WF-01"
     sid = env["GOOGLE_SHEET_ID"]
     cfg = {"model_claude": env["CLAUDE_MODEL"], "model_ollama": env["OLLAMA_MODEL"]}
 
@@ -251,7 +287,7 @@ def bangun_wf01(env: dict[str, str]) -> dict:
             webhookId=node_id("webhook/chat"),
         ),
         code_node("Validasi Masukan", (220, y), teks("n8n/code/wf01/validasi_masukan.js"),
-                  "FR-01. Sumber: n8n/code/wf01/validasi_masukan.js"),
+                  "FR-01. Sumber: n8n/code/wf01/validasi_masukan.js", on_error="continueRegularOutput"),
         if_benar("Cek Masukan", (440, y), "={{ $json.valid }}", "Pertanyaan atau identitas kosong ditolak (400)."),
         http("Baca Semua Sheet", (660, y), "GET", url_baca,
              "Langkah 2. Tujuh sheet dalam SATU panggilan spreadsheets.get. Kredensial: Google Sheets (demo).",
@@ -295,18 +331,22 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         code_node("Periksa Draf", (4180, ya),
                   gabung("n8n/code/pemeriksa_jawaban.js", "n8n/code/wf01/periksa_draf.js"),
                   "PJ-01–PJ-04 untuk draf; pelanggaran diganti template aman dan dicatat."),
-        code_node("Siapkan Penulisan", (4400, y), teks("n8n/code/wf01/siapkan_penulisan.js"),
+        code_node("Cek Mode Gagal", (4400, y), teks("n8n/code/wf01/cek_mode_gagal.js"),
+                  "FR-17. MODE_GAGAL = TRUE memicu error buatan tepat sebelum langkah tulis (T-19)."),
+        code_node("Siapkan Penulisan", (4620, y), teks("n8n/code/wf01/siapkan_penulisan.js"),
                   "Langkah 5–8: Prospek, Histori, Percakapan, Antrean_Staf, Draf disusun jadi satu batchUpdate."),
-        http("Tulis Semua Sheet", (4620, y), "POST", url_tulis,
+        http("Tulis Semua Sheet", (4840, y), "POST", url_tulis,
              "Langkah 5–8. SATU spreadsheets.batchUpdate, diterapkan atomik oleh Google (semua atau tidak sama sekali).",
              kredensial="googleSheetsOAuth2Api", body_expr="={{ JSON.stringify($json.body_tulis) }}"),
-        respond("Kirim Jawaban", (4840, y), 200, "={{ JSON.stringify($('Siapkan Penulisan').first().json.respons) }}",
+        respond("Kirim Jawaban", (5060, y), 200, "={{ JSON.stringify($('Siapkan Penulisan').first().json.respons) }}",
                 "Langkah 9. Kolom kontrak POST /chat."),
-        respond("Kirim Respons Gagal", (3300, yb + 160), 502, body_gagal,
-                "G5: kegagalan dilaporkan jujur; tidak ada data yang setengah tertulis. Log_Error dan MODE_GAGAL di BL-12."),
+        *jalur_log(sid, 2420, yb + 320, teks("n8n/code/wf01/siapkan_log_error.js"),
+                   "FR-16. Menerima error dari node mana pun; mencatat node asal ($prevNode) dan pesannya."),
+        respond("Kirim Respons Gagal", (3300, yb + 320), 502, body_gagal,
+                "G5: halaman menerima status gagal, bukan sukses; tidak ada data yang setengah tertulis."),
     ]
 
-    gagal = "Kirim Respons Gagal"
+    gagal = "Siapkan Log Error"
     connections = hubung(
         ("Terima Pertanyaan", 0, "Validasi Masukan"),
         ("Validasi Masukan", 0, "Cek Masukan"),
@@ -331,7 +371,7 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ("Ambil Teks Model", 0, "Periksa Jawaban"),
         ("Periksa Jawaban", 0, "Perlu Draf?"),
         ("Perlu Draf?", 0, "Susun Prompt Draf"),
-        ("Perlu Draf?", 1, "Siapkan Penulisan"),
+        ("Perlu Draf?", 1, "Cek Mode Gagal"),
         ("Susun Prompt Draf", 0, "Pilih Model Draf"),
         ("Pilih Model Draf", 0, "Panggil Ollama (Draf)"),
         ("Pilih Model Draf", 1, "Panggil Claude (Draf)"),
@@ -340,14 +380,52 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ("Panggil Claude (Draf)", 0, "Ambil Teks Draf"),
         ("Panggil Claude (Draf)", 1, gagal),
         ("Ambil Teks Draf", 0, "Periksa Draf"),
-        ("Periksa Draf", 0, "Siapkan Penulisan"),
+        ("Periksa Draf", 0, "Cek Mode Gagal"),
+        ("Cek Mode Gagal", 0, "Siapkan Penulisan"),
         ("Siapkan Penulisan", 0, "Tulis Semua Sheet"),
         ("Tulis Semua Sheet", 0, "Kirim Jawaban"),
         ("Tulis Semua Sheet", 1, gagal),
+        # keluaran error setiap Code node di jalur utama
+        *[(n, 1, gagal) for n in (
+            "Olah Data Sheet", "Cek Permintaan Lama", "Cari Prospek", "Susun Prompt", "Ambil Teks Model",
+            "Periksa Jawaban", "Susun Prompt Draf", "Ambil Teks Draf", "Periksa Draf", "Cek Mode Gagal",
+            "Siapkan Penulisan",
+        )],
+        # jalur pencatatan, lalu respons gagal
+        ("Siapkan Log Error", 0, "Baca Log Error"),
+        ("Baca Log Error", 0, "Susun Baris Log"),
+        ("Susun Baris Log", 0, "Catat Log Error"),
+        ("Catat Log Error", 0, "Kirim Respons Gagal"),
     )
 
     return {
         "name": "WF-01 Agent chat",
+        "nodes": nodes,
+        "connections": connections,
+        "settings": {"executionOrder": "v1", "errorWorkflow": "@WF:WF-05 Penanganan error"},
+        "pinData": {},
+        "active": False,
+    }
+
+
+# ---------- WF-05 ----------
+
+def bangun_wf05(env: dict[str, str]) -> dict:
+    _AWALAN_ID[0] = "WF-05"
+    nodes = [
+        node("Terima Error", "n8n-nodes-base.errorTrigger", 1, (0, 300), {},
+             "Error Trigger: dijalankan n8n saat workflow yang memasang WF-05 sebagai error workflow gagal."),
+        *jalur_log(env["GOOGLE_SHEET_ID"], 220, 300, teks("n8n/code/wf05/siapkan_log_wf05.js"),
+                   "FR-16. Jaring pengaman untuk kegagalan yang tidak tertangkap jalur gagal di WF-01."),
+    ]
+    connections = hubung(
+        ("Terima Error", 0, "Siapkan Log Error"),
+        ("Siapkan Log Error", 0, "Baca Log Error"),
+        ("Baca Log Error", 0, "Susun Baris Log"),
+        ("Susun Baris Log", 0, "Catat Log Error"),
+    )
+    return {
+        "name": "WF-05 Penanganan error",
         "nodes": nodes,
         "connections": connections,
         "settings": {"executionOrder": "v1"},
@@ -358,10 +436,11 @@ def bangun_wf01(env: dict[str, str]) -> dict:
 
 def main() -> None:
     env = baca_env()
-    keluaran = ROOT / "n8n/workflows/WF-01_agent_chat.json"
-    wf = bangun_wf01(env)
-    keluaran.write_text(json.dumps(wf, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Ditulis: {keluaran.relative_to(ROOT)} ({len(wf['nodes'])} node)")
+    for nama_file, pembangun in (("WF-01_agent_chat.json", bangun_wf01), ("WF-05_penanganan_error.json", bangun_wf05)):
+        keluaran = ROOT / "n8n/workflows" / nama_file
+        wf = pembangun(env)
+        keluaran.write_text(json.dumps(wf, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"Ditulis: {keluaran.relative_to(ROOT)} ({len(wf['nodes'])} node)")
 
 
 if __name__ == "__main__":

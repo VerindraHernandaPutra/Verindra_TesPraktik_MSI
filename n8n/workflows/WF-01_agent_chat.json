@@ -33,7 +33,8 @@
         220,
         300
       ],
-      "notes": "FR-01. Sumber: n8n/code/wf01/validasi_masukan.js"
+      "notes": "FR-01. Sumber: n8n/code/wf01/validasi_masukan.js",
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -103,7 +104,8 @@
         880,
         300
       ],
-      "notes": "Baris sheet menjadi objek per kolom; menyimpan header dan sheetId. Sumber: wf01/olah_data_sheet.js"
+      "notes": "Baris sheet menjadi objek per kolom; menyimpan header dan sheetId. Sumber: wf01/olah_data_sheet.js",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -117,7 +119,8 @@
         1100,
         300
       ],
-      "notes": "FR-16. id_permintaan yang sudah tercatat: kembalikan hasil lama, tanpa model dan tanpa menulis."
+      "notes": "FR-16. id_permintaan yang sudah tercatat: kembalikan hasil lama, tanpa model dan tanpa menulis.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -184,7 +187,8 @@
         1540,
         300
       ],
-      "notes": "FR-08. Cari per id_prospek atau kunci_normal; belum menulis."
+      "notes": "FR-08. Cari per id_prospek atau kunci_normal; belum menulis.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -251,7 +255,8 @@
         1980,
         300
       ],
-      "notes": "Langkah 3. FR-02, FR-03, FR-18. Sumber: wf01/susun_prompt.js + n8n/prompts/"
+      "notes": "Langkah 3. FR-02, FR-03, FR-18. Sumber: wf01/susun_prompt.js + n8n/prompts/",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -354,7 +359,8 @@
         2640,
         300
       ],
-      "notes": "Menyamakan respons Claude dan Ollama."
+      "notes": "Menyamakan respons Claude dan Ollama.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -368,7 +374,8 @@
         2860,
         300
       ],
-      "notes": "Langkah 4. FR-05, PJ-01–PJ-04."
+      "notes": "Langkah 4. FR-05, PJ-01–PJ-04.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -417,7 +424,8 @@
         3300,
         120
       ],
-      "notes": "FR-13, AR-08. Sumber: wf01/susun_prompt_draf.js + n8n/prompts/draf_followup.md"
+      "notes": "FR-13, AR-08. Sumber: wf01/susun_prompt_draf.js + n8n/prompts/draf_followup.md",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -520,7 +528,8 @@
         3960,
         120
       ],
-      "notes": "Menyamakan respons Claude dan Ollama untuk draf."
+      "notes": "Menyamakan respons Claude dan Ollama untuk draf.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -534,7 +543,23 @@
         4180,
         120
       ],
-      "notes": "PJ-01–PJ-04 untuk draf; pelanggaran diganti template aman dan dicatat."
+      "notes": "PJ-01–PJ-04 untuk draf; pelanggaran diganti template aman dan dicatat.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-01 node \"Cek Mode Gagal\" (FR-17). Mode: Run Once for All Items.\n// Bila MODE_GAGAL = TRUE di sheet Konfigurasi, picu error buatan tepat sebelum langkah tulis (5–8),\n// untuk memperagakan uji kegagalan (T-19). Karena penulisan atomik dan berada sesudah node ini,\n// tidak ada data yang tertulis; coba ulang setelah MODE_GAGAL = FALSE berjalan normal (T-20).\nconst T = $('Olah Data Sheet').first().json.tabel;\nconst baris = T.Konfigurasi.find((r) => String(r.kunci || '').trim() === 'MODE_GAGAL');\nconst aktif = baris && String(baris.nilai).trim().toUpperCase() === 'TRUE';\n\nif (aktif) {\n  throw new Error('MODE_GAGAL aktif: kegagalan simulasi sebelum penyimpanan. Tidak ada data yang ditulis.');\n}\nreturn $input.all();\n"
+      },
+      "id": "9f5c57aa-c8a0-5afe-b30f-11d9fc86e711",
+      "name": "Cek Mode Gagal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4400,
+        300
+      ],
+      "notes": "FR-17. MODE_GAGAL = TRUE memicu error buatan tepat sebelum langkah tulis (T-19).",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -545,10 +570,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4400,
+        4620,
         300
       ],
-      "notes": "Langkah 5–8: Prospek, Histori, Percakapan, Antrean_Staf, Draf disusun jadi satu batchUpdate."
+      "notes": "Langkah 5–8: Prospek, Histori, Percakapan, Antrean_Staf, Draf disusun jadi satu batchUpdate.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -568,7 +594,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4620,
+        4840,
         300
       ],
       "notes": "Langkah 5–8. SATU spreadsheets.batchUpdate, diterapkan atomik oleh Google (semua atau tidak sama sekali).",
@@ -587,10 +613,85 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        4840,
+        5060,
         300
       ],
       "notes": "Langkah 9. Kolom kontrak POST /chat."
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-01 node \"Siapkan Log Error\" (FR-16, G5). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun di WF-01; mencatat node asal dan pesannya.\nlet masukan = {};\ntry {\n  masukan = $('Validasi Masukan').first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: 'WF-01 Agent chat',\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n"
+      },
+      "id": "593a34be-6897-5007-8cc1-24fbcb5bf10b",
+      "name": "Siapkan Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        800
+      ],
+      "notes": "FR-16. Menerima error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "d63706cc-9c90-5e2d-a3b1-3c487494d927",
+      "name": "Baca Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        800
+      ],
+      "notes": "Nomor id_error berikutnya dan urutan kolom.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna; teks pertanyaan dipotong.\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {\n    id_permintaan: m.id_permintaan || '',\n    prospek: m.prospek || '',\n    pertanyaan: potong(m.pertanyaan || '', 200),\n  };\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
+      },
+      "id": "afd10e7f-4cff-5b0f-a910-fc9a5ffeba5d",
+      "name": "Susun Baris Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        800
+      ],
+      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_append) }}"
+      },
+      "id": "67e0b9e9-84ee-51cd-950b-de4e3b212a7b",
+      "name": "Catat Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        800
+      ],
+      "notes": "Menambah satu baris ke sheet Log_Error.",
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -606,9 +707,9 @@
       "typeVersion": 1.4,
       "position": [
         3300,
-        640
+        800
       ],
-      "notes": "G5: kegagalan dilaporkan jujur; tidak ada data yang setengah tertulis. Log_Error dan MODE_GAGAL di BL-12."
+      "notes": "G5: halaman menerima status gagal, bukan sukses; tidak ada data yang setengah tertulis."
     }
   ],
   "connections": {
@@ -663,7 +764,7 @@
         ],
         [
           {
-            "node": "Kirim Respons Gagal",
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -678,6 +779,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -686,6 +794,13 @@
         [
           {
             "node": "Permintaan Lama?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -718,6 +833,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -744,6 +866,13 @@
         [
           {
             "node": "Pilih Model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -779,7 +908,7 @@
         ],
         [
           {
-            "node": "Kirim Respons Gagal",
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -797,7 +926,7 @@
         ],
         [
           {
-            "node": "Kirim Respons Gagal",
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -812,6 +941,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -820,6 +956,13 @@
         [
           {
             "node": "Perlu Draf?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -837,7 +980,7 @@
         ],
         [
           {
-            "node": "Siapkan Penulisan",
+            "node": "Cek Mode Gagal",
             "type": "main",
             "index": 0
           }
@@ -849,6 +992,13 @@
         [
           {
             "node": "Pilih Model Draf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -884,7 +1034,7 @@
         ],
         [
           {
-            "node": "Kirim Respons Gagal",
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -902,7 +1052,7 @@
         ],
         [
           {
-            "node": "Kirim Respons Gagal",
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -917,6 +1067,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -924,7 +1081,32 @@
       "main": [
         [
           {
+            "node": "Cek Mode Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek Mode Gagal": {
+      "main": [
+        [
+          {
             "node": "Siapkan Penulisan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -936,6 +1118,13 @@
         [
           {
             "node": "Tulis Semua Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error",
             "type": "main",
             "index": 0
           }
@@ -953,6 +1142,50 @@
         ],
         [
           {
+            "node": "Siapkan Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Log Error": {
+      "main": [
+        [
+          {
+            "node": "Baca Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Log Error": {
+      "main": [
+        [
+          {
+            "node": "Susun Baris Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Baris Log": {
+      "main": [
+        [
+          {
+            "node": "Catat Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catat Log Error": {
+      "main": [
+        [
+          {
             "node": "Kirim Respons Gagal",
             "type": "main",
             "index": 0
@@ -962,7 +1195,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "@WF:WF-05 Penanganan error"
   },
   "pinData": {},
   "active": false
