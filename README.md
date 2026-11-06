@@ -38,7 +38,14 @@ scripts/    Script Python: uji otomatis dan reset seed
    Menghentikan: `docker compose down` (data n8n tetap tersimpan di volume `n8n_data`).
 3. Buat Google Spreadsheet dan impor seed — _belum diisi_
 4. Pasang kredensial di n8n — _belum diisi_
-5. Import workflow — _belum diisi_
+5. **Rakit dan pasang workflow.** Workflow dirakit dari sumber di `n8n/prompts/` dan `n8n/code/`:
+   ```
+   python scripts/build_workflows.py
+   ```
+   - Pertama kali: di n8n, **Create > Workflow > ⋯ > Import from File**, pilih file di `n8n/workflows/`,
+     pasang kredensial di node Google Sheets dan "Panggil Claude", lalu **Publish**.
+   - Perubahan berikutnya: isi `N8N_API_KEY` di `.env` (n8n: Settings > n8n API), lalu
+     `python scripts/deploy_workflows.py`. Kredensial yang sudah terpasang dipertahankan dan versi baru langsung di-publish.
 6. **Buka halaman web.** Pastikan workflow WF-01 sudah di-publish di n8n, lalu:
    ```
    cd web
