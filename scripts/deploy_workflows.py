@@ -9,7 +9,7 @@ Alur: build dulu (python scripts/build_workflows.py), lalu:
   kredensial sejenis yang sudah dipakai workflow mana pun di n8n (isi kredensial tidak pernah dibaca).
 - Rujukan "@WF:<nama workflow>" diganti dengan ID workflow tersebut; file tanpa rujukan dipasang lebih dulu.
 - Jika workflow sudah di-publish, n8n otomatis mem-publish versi baru (perilaku PUT /workflows/{id}).
-- Workflow baru dibuat dalam keadaan belum di-publish.
+- Workflow yang semua kredensialnya terpasang langsung di-publish (n8n hanya terbuka di localhost).
 
 Butuh N8N_API_KEY di .env (n8n: Settings > n8n API > Create an API key). Key tidak pernah dicetak.
 """
@@ -144,9 +144,9 @@ class Pemasang:
         self.workflow[nama] = hasil
 
         terbit = bool(hasil.get("activeVersionId")) and hasil.get("activeVersionId") == hasil.get("versionId")
-        # Error workflow wajib punya versi ter-publish agar bisa dipasang sebagai errorWorkflow.
-        # Error Trigger tidak membuka alamat apa pun, jadi aman di-publish otomatis.
-        if not terbit and any(n["type"] == "n8n-nodes-base.errorTrigger" for n in body["nodes"]) and not tanpa:
+        # Workflow dengan semua kredensial terpasang langsung di-publish agar webhook dan error workflow aktif.
+        # Aman karena n8n hanya terbuka di localhost (S-02, docker-compose 127.0.0.1:5678).
+        if not terbit and not tanpa:
             self.api.panggil("POST", f"/workflows/{hasil['id']}/publish", {})
             terbit = True
         print("  Status: " + ("versi terbaru sudah di-publish." if terbit else "belum di-publish; klik Publish di n8n bila sudah siap."))

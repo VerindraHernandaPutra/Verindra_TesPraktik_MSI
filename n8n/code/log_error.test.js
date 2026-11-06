@@ -38,6 +38,8 @@ test('pesan diambil dari berbagai bentuk error n8n', () => {
 test('data_masukan hanya kolom aman, pertanyaan dipotong, kredensial disamarkan', () => {
   const d = JSON.parse(dataMasukanAman({ id_permintaan: 'r1', prospek: 'P03', pertanyaan: 'x'.repeat(500), headers: { 'x-api-key': 'sk-ant-zzz' } }));
   assert.deepEqual(Object.keys(d), ['id_permintaan', 'prospek', 'pertanyaan']);
+  const d3 = JSON.parse(dataMasukanAman({ id_draf: 'D0001', keputusan: 'setuju', oleh: 'staf', token: 'rahasia' }));
+  assert.deepEqual(d3, { id_draf: 'D0001', keputusan: 'setuju', oleh: 'staf' });
   assert.ok(d.pertanyaan.length <= 200);
   const d2 = dataMasukanAman({ pertanyaan: 'kunci saya sk-ant-api03-RAHASIA' });
   assert.ok(!d2.includes('RAHASIA'));

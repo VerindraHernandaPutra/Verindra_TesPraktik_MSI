@@ -1,9 +1,10 @@
-// WF-01 node "Olah Data Sheet". Mode: Run Once for All Items.
-// Mengubah respons spreadsheets.get (semua sheet dalam satu panggilan) menjadi:
-//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai}
+// Node "Olah Data Sheet" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.
+// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:
+//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}
 //   header[sheet] = urutan kolom (dipakai saat menulis)
-//   gid[sheet]    = sheetId numerik (dipakai appendCells)
-const SHEET_WAJIB = ['Konfigurasi', 'KB', 'Prospek', 'Histori', 'Percakapan', 'Antrean_Staf', 'Draf'];
+//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)
+// SHEET_WAJIB diisi saat dirakit.
+const SHEET_WAJIB = /*@SHEET_WAJIB*/ null;
 
 const res = $input.first().json;
 const tabel = {};
@@ -19,9 +20,10 @@ for (const sh of res.sheets || []) {
   const kolom = (baris[0] || []).map((k) => k.trim());
   header[judul] = kolom;
   tabel[judul] = baris
+    .map((r, i) => ({ r, nomor: i + 1 }))
     .slice(1)
-    .filter((r) => r.some((v) => v.trim() !== ''))
-    .map((r) => Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])));
+    .filter(({ r }) => r.some((v) => v.trim() !== ''))
+    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));
 }
 
 const hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);

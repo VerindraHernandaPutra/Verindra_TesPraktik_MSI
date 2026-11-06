@@ -1,0 +1,408 @@
+{
+  "name": "WF-02 Data panel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "panel",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "http://localhost:8000"
+        }
+      },
+      "id": "b0271c6c-becd-5a34-9176-9ef30282f4ba",
+      "name": "Terima Panel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "notes": "GET /panel (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+      "webhookId": "8aa112c8-4784-564f-b1ff-400360c990b3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-02 node \"Validasi Panel\" (GET /panel?peran=...). Mode: Run Once for All Items.\nconst q = $input.first().json.query || {};\nconst peran = String(q.peran ?? '').trim().toLowerCase();\nconst valid = ['staf', 'ae_a', 'ae_b', 'admin'].includes(peran);\nreturn [{ json: { valid, pesan: valid ? '' : 'Peran tidak dikenal. Gunakan staf, ae_a, ae_b, atau admin.', peran } }];\n"
+      },
+      "id": "c3e491e0-f3d1-5fa5-b3a9-999d69d615bf",
+      "name": "Validasi Panel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "notes": "Validasi masukan dan peran.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0a5a681d-8d29-574c-b4ac-63f311d81aa5",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "60cc5d50-3d27-5315-aa1c-6f4a47dc8d6b",
+      "name": "Panel Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ],
+      "notes": "Masukan tidak valid ditolak (400)."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?includeGridData=true&ranges=Konfigurasi&ranges=Prospek&ranges=Percakapan&ranges=Antrean_Staf&ranges=Draf&fields=sheets%28properties%28sheetId%2Ctitle%29%2Cdata%28rowData%28values%28formattedValue%29%29%29%29",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "5692b245-79c4-5b0f-9231-9075f3a103d4",
+      "name": "Baca Sheet Panel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "notes": "Sheet Konfigurasi, Prospek, Percakapan, Antrean_Staf, Draf dalam SATU panggilan spreadsheets.get.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Olah Data Sheet\" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:\n//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}\n//   header[sheet] = urutan kolom (dipakai saat menulis)\n//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)\n// SHEET_WAJIB diisi saat dirakit.\nconst SHEET_WAJIB = [\n  \"Konfigurasi\",\n  \"Prospek\",\n  \"Percakapan\",\n  \"Antrean_Staf\",\n  \"Draf\"\n];\n\nconst res = $input.first().json;\nconst tabel = {};\nconst header = {};\nconst gid = {};\n\nfor (const sh of res.sheets || []) {\n  const judul = sh.properties.title;\n  gid[judul] = sh.properties.sheetId;\n  const baris = ((sh.data && sh.data[0] && sh.data[0].rowData) || []).map((r) =>\n    (r.values || []).map((c) => (c && c.formattedValue != null ? String(c.formattedValue) : ''))\n  );\n  const kolom = (baris[0] || []).map((k) => k.trim());\n  header[judul] = kolom;\n  tabel[judul] = baris\n    .map((r, i) => ({ r, nomor: i + 1 }))\n    .slice(1)\n    .filter(({ r }) => r.some((v) => v.trim() !== ''))\n    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));\n}\n\nconst hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);\nif (hilang.length) throw new Error('Sheet tidak ditemukan atau tanpa header: ' + hilang.join(', '));\n\nreturn [{ json: { tabel, header, gid } }];\n"
+      },
+      "id": "fd544135-116b-5352-8a1f-7e10146e3c9d",
+      "name": "Olah Sheet Panel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "notes": "Baris sheet menjadi objek per kolom (+ nomor baris).",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun permintaan spreadsheets.batchUpdate (WF-01, WF-03).\n// Semua perubahan satu permintaan dikirim dalam satu batchUpdate, yang diterapkan Google secara atomik.\n// D = keluaran node \"Olah Data Sheet\" ({tabel, header, gid}). Baris module.exports hanya untuk uji unit.\n\nconst AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };\nconst STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];\nconst STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)'];\n\nfunction nomorBerikut(baris, kolom) {\n  return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n}\n\nfunction idBaru(awalan, nomor) {\n  return awalan + String(nomor).padStart(4, '0');\n}\n\nfunction sel(v) {\n  return typeof v === 'boolean'\n    ? { userEnteredValue: { boolValue: v } }\n    : { userEnteredValue: { stringValue: v == null ? '' : String(v) } };\n}\n\n// Menambah baris di akhir sheet; kolom mengikuti urutan header sheet itu sendiri.\nfunction tambahBaris(D, sheet, daftar) {\n  const kolom = D.header[sheet];\n  if (!kolom) throw new Error(`Sheet ${sheet} tidak dibaca.`);\n  for (const b of daftar) {\n    const asing = Object.keys(b).filter((k) => !kolom.includes(k));\n    if (asing.length) throw new Error(`Kolom ${asing.join(', ')} tidak ada di header sheet ${sheet}.`);\n  }\n  return {\n    appendCells: {\n      sheetId: D.gid[sheet],\n      rows: daftar.map((b) => ({ values: kolom.map((k) => sel(b[k])) })),\n      fields: 'userEnteredValue',\n    },\n  };\n}\n\n// Mengubah sel tertentu pada baris yang sudah ada (objek dari tabel, membawa _baris).\nfunction ubahSel(D, sheet, objek, perubahan) {\n  if (!objek || !objek._baris || objek._baris < 2) throw new Error(`Baris ${sheet} tidak valid untuk diubah.`);\n  return Object.entries(perubahan).map(([k, v]) => {\n    const c = D.header[sheet].indexOf(k);\n    if (c < 0) throw new Error(`Kolom ${k} tidak ada di header sheet ${sheet}.`);\n    return {\n      updateCells: {\n        range: {\n          sheetId: D.gid[sheet],\n          startRowIndex: objek._baris - 1,\n          endRowIndex: objek._baris,\n          startColumnIndex: c,\n          endColumnIndex: c + 1,\n        },\n        rows: [{ values: [sel(v)] }],\n        fields: 'userEnteredValue',\n      },\n    };\n  });\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };\n}\n\n// WF-02 node \"Susun Panel\" (FR-12, FR-15; kontrak GET /panel Section 10). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini (AKTOR, STATUS_PIPELINE).\n// Tanpa nilai penjualan (Section 2). AE hanya melihat prospek miliknya beserta tiket dan drafnya.\nconst peran = $('Validasi Panel').first().json.peran;\nconst T = $('Olah Sheet Panel').first().json.tabel;\n\nconst konfig = Object.fromEntries(T.Konfigurasi.map((r) => [String(r.kunci).trim(), String(r.nilai ?? '').trim()]));\nconst tanggal = konfig.TANGGAL_SIMULASI || '';\n\nconst semua = T.Prospek.filter((p) => String(p.id_prospek || '').trim());\nconst terlihat = peran === 'ae_a' || peran === 'ae_b' ? semua.filter((p) => p.ae === AKTOR[peran]) : semua;\nconst idTerlihat = new Set(terlihat.map((p) => p.id_prospek));\nconst namaProspek = Object.fromEntries(semua.map((p) => [p.id_prospek, p.nama_perusahaan]));\nconst percakapan = Object.fromEntries(T.Percakapan.map((c) => [c.id_percakapan, c]));\n\nconst KOLOM_PROSPEK = [\n  'id_prospek', 'nama_perusahaan', 'sektor', 'ae', 'status', 'kebutuhan', 'status_kebutuhan', 'tgl_tindak_lanjut', 'pengingat',\n];\nconst prospek = terlihat.map((p) => Object.fromEntries(KOLOM_PROSPEK.map((k) => [k, p[k] ?? ''])));\n\nconst per_status = Object.fromEntries(STATUS_PIPELINE.map((s) => [s, terlihat.filter((p) => p.status === s).length]));\nconst per_ae = { 'AE A': 0, 'AE B': 0 };\nfor (const p of terlihat) if (p.ae in per_ae) per_ae[p.ae] += 1;\n\nconst antrean = T.Antrean_Staf.filter((t) => String(t.status).trim() !== 'Selesai')\n  .map((t) => {\n    const c = percakapan[t.id_percakapan] || {};\n    return {\n      id_tiket: t.id_tiket,\n      id_percakapan: t.id_percakapan,\n      id_prospek: c.id_prospek || '',\n      nama_perusahaan: namaProspek[c.id_prospek] || '',\n      pertanyaan: c.pertanyaan || '',\n      jawaban: c.jawaban || '',\n      alasan: t.alasan,\n      status: t.status,\n      waktu: t.waktu,\n    };\n  })\n  .filter((t) => idTerlihat.has(t.id_prospek));\n\nconst daftarDraf = (status) =>\n  T.Draf.filter((d) => String(d.status).trim() === status && idTerlihat.has(d.id_prospek))\n    .map((d) => {\n      const c = percakapan[d.id_percakapan] || {};\n      return {\n        id_draf: d.id_draf,\n        id_prospek: d.id_prospek,\n        nama_perusahaan: namaProspek[d.id_prospek] || '',\n        id_percakapan: d.id_percakapan || '',\n        pertanyaan: c.pertanyaan || '',\n        isi_draf: d.isi_draf,\n        catatan: d.catatan || '',\n        dibuat: d.dibuat,\n        diputuskan_oleh: d.diputuskan_oleh || '',\n      };\n    })\n    .reverse(); // terbaru di atas\n\n// Pengingat (FR-11): tanggal tindak lanjut sama dengan atau sebelum TANGGAL_SIMULASI.\nconst pengingat = [];\nconst tindak_lanjut_mendatang = [];\nfor (const p of terlihat) {\n  const tgl = String(p.tgl_tindak_lanjut || '').trim();\n  if (!tgl) continue;\n  const butir = { id_prospek: p.id_prospek, nama_perusahaan: p.nama_perusahaan, ae: p.ae, tgl_tindak_lanjut: tgl };\n  if (tanggal && tgl < tanggal) pengingat.push({ ...butir, keterangan: 'Terlewat' });\n  else if (tgl === tanggal) pengingat.push({ ...butir, keterangan: 'Jatuh tempo hari ini' });\n  else tindak_lanjut_mendatang.push(butir);\n}\nconst urutTanggal = (a, b) => a.tgl_tindak_lanjut.localeCompare(b.tgl_tindak_lanjut);\n\nreturn [\n  {\n    json: {\n      status: 'ok',\n      peran,\n      tanggal_simulasi: tanggal,\n      prospek,\n      ringkasan: { total: terlihat.length, per_status, per_ae },\n      antrean,\n      draf_menunggu: daftarDraf('Menunggu persetujuan'),\n      draf_disetujui: daftarDraf('Disetujui'),\n      pengingat: pengingat.sort(urutTanggal),\n      tindak_lanjut_mendatang: tindak_lanjut_mendatang.sort(urutTanggal),\n    },\n  },\n];\n"
+      },
+      "id": "35207ea6-afe9-5290-97be-934018d0ad34",
+      "name": "Susun Panel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "notes": "FR-12, FR-15. Ringkasan per status dan per AE, antrean, draf, pengingat; tanpa nilai penjualan.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ditolak', pesan: $json.pesan }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "8aa86d5b-6fb6-5c58-91ca-aa96d821d39f",
+      "name": "Kirim Penolakan Panel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        500
+      ],
+      "notes": "Ditolak karena aturan (bukan kegagalan sistem)."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'gagal', pesan: 'Layanan sedang bermasalah, permintaan tidak dapat diproses. Silakan coba ulang.' }) }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "03ca6a3d-7ef6-5bd0-9521-e17916659a50",
+      "name": "Kirim Respons Gagal Panel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        680
+      ],
+      "notes": "G5: kegagalan dilaporkan jujur."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Siapkan Log Error\" pada jalur gagal (WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.\n// WORKFLOW dan NODE_MASUKAN (node validasi masukan) diisi saat dirakit.\nconst WORKFLOW = \"WF-02 Data panel\";\nconst NODE_MASUKAN = \"Validasi Panel\";\n\nlet masukan = {};\ntry {\n  masukan = $(NODE_MASUKAN).first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: WORKFLOW,\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n"
+      },
+      "id": "23c52d58-c486-5e07-920c-11a14ac195af",
+      "name": "Siapkan Log Error (Panel)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        680
+      ],
+      "notes": "Menerima error dari node mana pun di rantai ini.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "01758ac0-9180-579a-a5d7-dd1a523ae991",
+      "name": "Baca Log Error (Panel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        680
+      ],
+      "notes": "Nomor id_error berikutnya dan urutan kolom.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.\nconst KOLOM_MASUKAN_AMAN = [\n  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',\n];\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {};\n  for (const k of KOLOM_MASUKAN_AMAN) {\n    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);\n  }\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error (Panel)\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
+      },
+      "id": "9fd222fb-7f7b-587f-9f0f-49a3e5f261be",
+      "name": "Susun Baris Log (Panel)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        680
+      ],
+      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_append) }}"
+      },
+      "id": "98f166a5-1a49-553c-ae77-87244bd979ac",
+      "name": "Catat Log Error (Panel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        680
+      ],
+      "notes": "Menambah satu baris ke sheet Log_Error.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "fac51530-9f7b-53f8-a024-9395ae0c313e",
+      "name": "Kirim Hasil Panel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1320,
+        300
+      ],
+      "notes": "Respons sesuai kontrak."
+    }
+  ],
+  "connections": {
+    "Terima Panel": {
+      "main": [
+        [
+          {
+            "node": "Validasi Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi Panel": {
+      "main": [
+        [
+          {
+            "node": "Panel Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Panel Valid?": {
+      "main": [
+        [
+          {
+            "node": "Baca Sheet Panel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Penolakan Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Sheet Panel": {
+      "main": [
+        [
+          {
+            "node": "Olah Sheet Panel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Olah Sheet Panel": {
+      "main": [
+        [
+          {
+            "node": "Susun Panel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Panel": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Panel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Log Error (Panel)": {
+      "main": [
+        [
+          {
+            "node": "Baca Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Log Error (Panel)": {
+      "main": [
+        [
+          {
+            "node": "Susun Baris Log (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Baris Log (Panel)": {
+      "main": [
+        [
+          {
+            "node": "Catat Log Error (Panel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catat Log Error (Panel)": {
+      "main": [
+        [
+          {
+            "node": "Kirim Respons Gagal Panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "@WF:WF-05 Penanganan error"
+  },
+  "pinData": {},
+  "active": false
+}

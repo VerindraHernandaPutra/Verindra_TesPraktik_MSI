@@ -1,5 +1,5 @@
 // WF-01 node "Siapkan Penulisan" (langkah 5–8: FR-04, FR-06, FR-08, FR-10, FR-13, NFR-05).
-// Mode: Run Once for All Items.
+// Mode: Run Once for All Items. Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini.
 // Menyusun SEMUA baris baru, lalu satu permintaan spreadsheets.batchUpdate (appendCells) yang diterapkan
 // Google secara atomik: semua baris tertulis, atau tidak satu pun. Kegagalan di langkah sebelumnya
 // tidak pernah meninggalkan data setengah tertulis, jadi coba ulang selalu bersih (FR-16).
@@ -16,9 +16,7 @@ try {
 }
 
 const waktu = $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true });
-const nomorBerikut = (baris, kolom) =>
-  Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\D/g, ''), 10) || 0)) + 1;
-const id = (awalan, n) => awalan + String(n).padStart(4, '0');
+const id = idBaru;
 
 const p = cari.prospek;
 const tanda = `id_permintaan=${j.id_permintaan}`;
@@ -102,28 +100,10 @@ if (draf) {
   });
 }
 
-// Susun appendCells per sheet mengikuti urutan header di sheet itu sendiri.
-function sel(v) {
-  return typeof v === 'boolean'
-    ? { userEnteredValue: { boolValue: v } }
-    : { userEnteredValue: { stringValue: v == null ? '' : String(v) } };
-}
-const requests = [];
-for (const [sheet, baris] of Object.entries(baru)) {
-  if (!baris.length) continue;
-  const kolom = D.header[sheet];
-  for (const b of baris) {
-    const asing = Object.keys(b).filter((k) => !kolom.includes(k));
-    if (asing.length) throw new Error(`Kolom ${asing.join(', ')} tidak ada di header sheet ${sheet}.`);
-  }
-  requests.push({
-    appendCells: {
-      sheetId: D.gid[sheet],
-      rows: baris.map((b) => ({ values: kolom.map((k) => sel(b[k])) })),
-      fields: 'userEnteredValue',
-    },
-  });
-}
+// appendCells per sheet mengikuti urutan header sheet itu sendiri (sheet_tulis.js).
+const requests = Object.entries(baru)
+  .filter(([, baris]) => baris.length)
+  .map(([sheet, baris]) => tambahBaris(D, sheet, baris));
 
 return [
   {

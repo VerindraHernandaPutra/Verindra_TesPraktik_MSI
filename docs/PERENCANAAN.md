@@ -529,7 +529,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-10 | S2 | WF-01 langkah 5: normalisasi kunci, upsert Prospek, tulis Histori | CC | Memasukkan P03 dua kali: total tetap 10, Histori mencatat duplikat | FR-08, FR-10 | Selesai |
 | BL-11 | S2 | WF-01 langkah 6–8: Percakapan, Antrean\_Staf, draf, idempotensi id\_permintaan | CC | Permintaan berulang mengembalikan hasil lama tanpa baris baru | FR-04, FR-06, FR-13 | Selesai |
 | BL-12 | S2 | WF-05, cabang error di node Sheets, MODE\_GAGAL; pesan gagal + Coba ulang di UI | CC | Uji gagal: status gagal tampil, tidak ada baris sukses, coba ulang tidak menggandakan data | FR-16, FR-17 | Selesai |
-| BL-13 | S2 | WF-03 setujui/tolak draf dan ubah status; tab Panel staf | CC | Draf hanya bisa Siap kirim (simulasi) setelah Disetujui; Histori tercatat | FR-09, FR-14 | Belum |
+| BL-13 | S2 | WF-03 setujui/tolak draf dan ubah status; tab Panel staf | CC | Draf hanya bisa Siap kirim (simulasi) setelah Disetujui; Histori tercatat | FR-09, FR-14 | Selesai |
 | BL-14 | S3 | WF-02 GET /panel dan tab Dashboard | CC | Ringkasan 3/3/3/1 dan per AE 5/5 sama dengan isi sheet | FR-12 | Belum |
 | BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Belum |
 | BL-22 | S3 | Endpoint POST /prospek/draf di WF-03, prompt draf penawaran, kolom catatan dan tombol Buat draf AI di tab Dashboard | CC | Draf dari catatan P03 muncul di panel staf berstatus Menunggu persetujuan; Histori mencatat draf\_dibuat | FR-23 | Belum |
@@ -593,13 +593,13 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-09 | CRM | Pertanyaan dengan prospek “P03” dua kali, id\_permintaan berbeda | Prospek tetap 10; Histori mencatat duplikat\_terdeteksi | O | FR-08 | Lulus (6 Nov 2026): P03 dua kali, Prospek tetap 10, Histori H0001–H0002 duplikat_terdeteksi; coba ulang tidak menambah Histori |
 | T-10 | CRM | Prospek ditulis “PT. Simulasi Tani Makmur ” (variasi ejaan) | Dikenali sebagai P03; total tetap 10 | O | FR-08 | Lulus (6 Nov 2026): dikenali sebagai P03 (H0003), total tetap 10 |
 | T-11 | CRM | Prospek baru “PT Simulasi Contoh Baru” | P11 dibuat dengan status Baru dan kebutuhan Belum terkonfirmasi; Histori prospek\_baru | O | FR-08, FR-10 | Lulus (6 Nov 2026): P11 dibuat sekali (Baru, Belum terkonfirmasi, AE A), Histori H0005 prospek_baru; coba ulang tidak menambah baris. Data uji direset di BL-18 |
-| T-12 | CRM | AE A mengubah P01 dari Baru ke Kualifikasi | Status berubah; Histori mencatat aktor, status lama, dan status baru | O | FR-09 | Belum diuji |
-| T-13 | CRM | AE B mencoba mengubah status P01 milik AE A | Ditolak; data tidak berubah | O | FR-09, FR-15 | Belum diuji |
-| T-14 | CRM | Status baru “Menang” (di luar daftar) | Ditolak dengan pesan status tidak valid | O | FR-09 | Belum diuji |
+| T-12 | CRM | AE A mengubah P01 dari Baru ke Kualifikasi | Status berubah; Histori mencatat aktor, status lama, dan status baru | O | FR-09 | Lulus (6 Nov 2026): P01 Baru menjadi Kualifikasi oleh AE A; Histori H0023 ubah_status (aktor, status lama, status baru) |
+| T-13 | CRM | AE B mencoba mengubah status P01 milik AE A | Ditolak; data tidak berubah | O | FR-09, FR-15 | Lulus (6 Nov 2026): ditolak 400 "Prospek P01 milik AE A"; data tidak berubah |
+| T-14 | CRM | Status baru “Menang” (di luar daftar) | Ditolak dengan pesan status tidak valid | O | FR-09 | Lulus (6 Nov 2026): ditolak 400 "Status tidak valid" |
 | T-15 | Draf | Setelah T-01 | Draf untuk P03 berstatus Menunggu persetujuan | O | FR-13 | Lulus (6 Nov 2026): draf D0001 untuk P03 berstatus Menunggu persetujuan |
-| T-16 | Draf | Draf yang belum disetujui ditandai Siap kirim | Ditolak; status tetap Menunggu persetujuan | O | FR-14 | Belum diuji |
-| T-17 | Draf | Staf menyetujui draf, lalu menandai Siap kirim (simulasi) | Status Disetujui lalu Siap kirim (simulasi); Histori draf\_diputuskan | O | FR-14 | Belum diuji |
-| T-18 | Draf | Staf menolak draf dengan catatan | Status Ditolak; catatan tersimpan | O | FR-14 | Belum diuji |
+| T-16 | Draf | Draf yang belum disetujui ditandai Siap kirim | Ditolak; status tetap Menunggu persetujuan | O | FR-14 | Lulus (6 Nov 2026): D0001 Menunggu ditandai Siap kirim ditolak 400; status tetap |
+| T-17 | Draf | Staf menyetujui draf, lalu menandai Siap kirim (simulasi) | Status Disetujui lalu Siap kirim (simulasi); Histori draf\_diputuskan | O | FR-14 | Lulus (6 Nov 2026): D0001 Disetujui lalu Siap kirim (simulasi); Histori H0020–H0021 draf_diputuskan |
+| T-18 | Draf | Staf menolak draf dengan catatan | Status Ditolak; catatan tersimpan | O | FR-14 | Lulus (6 Nov 2026): tanpa catatan ditolak 400; dengan catatan D0002 Ditolak, catatan tersimpan (H0022) |
 | T-19 | Keandalan | MODE\_GAGAL = TRUE, kirim pertanyaan | Respons status gagal; Percakapan tidak bertambah; Log\_Error bertambah | O | FR-16, FR-17 | Lulus (6 Nov 2026): HTTP 502 status gagal; Tulis Semua Sheet tidak dijalankan, Percakapan tetap 6; Log_Error E0001 (node Cek Mode Gagal) |
 | T-20 | Keandalan | MODE\_GAGAL = FALSE, coba ulang dengan id\_permintaan yang sama | Sukses; tepat satu baris Percakapan untuk id\_permintaan itu | O | FR-16 | Lulus (6 Nov 2026): coba ulang id yang sama sukses, Percakapan 6 menjadi 7 (tepat satu baris C0007) |
 | T-21 | Keandalan | Kirim ulang id\_permintaan yang sudah sukses | Hasil lama dikembalikan; tidak ada baris baru di sheet mana pun | O | FR-16, NFR-04 | Lulus (6 Nov 2026): hasil lama dikembalikan (berulang), tanpa memanggil model dan tanpa baris baru |

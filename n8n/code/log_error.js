@@ -27,14 +27,16 @@ function pesanError(e) {
   return bagian.length ? bagian.join(' — ') : JSON.stringify(e);
 }
 
-// Hanya kolom masukan yang aman dan berguna; teks pertanyaan dipotong.
+// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.
+const KOLOM_MASUKAN_AMAN = [
+  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',
+];
 function dataMasukanAman(masukan) {
   const m = masukan || {};
-  const aman = {
-    id_permintaan: m.id_permintaan || '',
-    prospek: m.prospek || '',
-    pertanyaan: potong(m.pertanyaan || '', 200),
-  };
+  const aman = {};
+  for (const k of KOLOM_MASUKAN_AMAN) {
+    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);
+  }
   return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);
 }
 
