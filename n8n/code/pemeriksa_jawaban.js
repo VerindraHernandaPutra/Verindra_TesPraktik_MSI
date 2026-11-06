@@ -10,7 +10,23 @@ const TEMPLATE_ESKALASI =
   'Mohon maaf, saya belum dapat menjawab pertanyaan ini dari acuan yang tersedia. ' +
   'Pertanyaan Anda saya teruskan kepada staf.';
 
-const TOPIK_VALID = ['biaya_pendaftaran', 'sponsorship', 'jaminan_penghargaan', 'tarif', 'jadwal', 'lainnya'];
+const TOPIK_VALID = ['biaya_pendaftaran', 'sponsorship', 'jaminan_penghargaan', 'tarif', 'jadwal', 'sapaan', 'lainnya'];
+
+// Pengecualian PJ-04 untuk sapaan (AR-04): hanya bila PERTANYAAN PENGGUNA sendiri berupa sapaan
+// pendek, dicek dengan pola tetap, sehingga label "sapaan" dari AI saja tidak cukup.
+const POLA_SAPAAN =
+  /^(halo+|hal+o|hai+|hi+|hello|hey|pagi|siang|sore|malam|selamat\s+(pagi|siang|sore|malam)|assalamu'?alaikum|permisi|terima\s*kasih|makasih|thanks?|ok(e|ay)?|siapa\s+(kamu|anda)|(kamu|anda)\s+siapa)\b/i;
+const POLA_BUKAN_SAPAAN =
+  /\b(apa|apakah|berapa|bagaimana|kapan|bisa|bisakah|dimana|di\s+mana|harus|biaya|harga|tarif|paket|sponsor\w*|jadwal|wawancara|bintang|penghargaan|daftar|pendaftaran)\b/i;
+
+function pertanyaanSapaan(pertanyaan) {
+  const t = String(pertanyaan || '').trim().replace(/[!?.,\s]+$/, '');
+  if (!t || t.split(/\s+/).length > 6) return false;
+  if (!POLA_SAPAAN.test(t)) return false;
+  // Sisa kalimat setelah frasa identitas tidak boleh memuat pertanyaan atau kata topik.
+  const sisa = t.replace(/siapa\s+(kamu|anda)|(kamu|anda)\s+siapa/gi, '');
+  return !sisa.includes('?') && !POLA_BUKAN_SAPAAN.test(sisa);
+}
 
 // PJ-01: nominal uang
 const POLA_UANG = [
@@ -94,8 +110,9 @@ function parseKeluaranModel(keluaran) {
 
 // Fungsi utama. keluaranModel: teks atau objek JSON dari agent.
 // kodeKbValid: kode KB aktif dari sheet KB (default KB01–KB04).
+// pertanyaan: teks pertanyaan pengguna, dipakai untuk pengecualian sapaan pada PJ-04.
 // Mengembalikan { lolos_pemeriksa, pelanggaran, hasil } dengan hasil siap dipakai workflow.
-function periksaJawaban(keluaranModel, kodeKbValid) {
+function periksaJawaban(keluaranModel, kodeKbValid, pertanyaan) {
   const kodeValid = Array.isArray(kodeKbValid) && kodeKbValid.length ? kodeKbValid : KODE_KB_BAWAAN;
   const data = parseKeluaranModel(keluaranModel);
   const pelanggaran = [];
@@ -117,7 +134,12 @@ function periksaJawaban(keluaranModel, kodeKbValid) {
     if (rujukanAsing.length) {
       pelanggaran.push({ aturan: 'PJ-04', detail: `rujukan tidak ada di KB: ${rujukanAsing.join(', ')}` });
     }
-    if (!data.eskalasi && data.rujukan_kb.length === 0) {
+    const sapaanSah =
+      Array.isArray(data.topik) &&
+      data.topik.length === 1 &&
+      data.topik[0] === 'sapaan' &&
+      pertanyaanSapaan(pertanyaan);
+    if (!data.eskalasi && data.rujukan_kb.length === 0 && !sapaanSah) {
       pelanggaran.push({ aturan: 'PJ-04', detail: 'jawaban tanpa eskalasi tidak punya rujukan KB' });
     }
   }
@@ -156,5 +178,5 @@ function periksaJawaban(keluaranModel, kodeKbValid) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { periksaJawaban, periksaTeks, parseKeluaranModel, TEMPLATE_ESKALASI, KODE_KB_BAWAAN };
+  module.exports = { periksaJawaban, periksaTeks, parseKeluaranModel, pertanyaanSapaan, TEMPLATE_ESKALASI, KODE_KB_BAWAAN };
 }

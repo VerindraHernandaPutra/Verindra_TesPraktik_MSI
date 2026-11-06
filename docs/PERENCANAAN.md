@@ -4,14 +4,14 @@ Nov 6, 2026 · @ren
 
 ## 0. Info dokumen
 
-Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.1, disetujui kandidat pada 6 November 2026; target selesai Sabtu, 7 November malam.
+Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.2 (versi 1.1 disetujui kandidat pada 6 November 2026); target selesai Sabtu, 7 November malam.
 
 | Atribut | Isi |
 | --- | --- |
 | Nama proyek | AI Agent Layanan & CRM Awards (Simulasi MSI) |
 | Kode proyek | MSI-A1A6 |
 | Tugas yang dicakup | A1 sebagai demo utama (perilaku agent) + A6 (database dan pipeline) |
-| Versi | 1.1 (disetujui kandidat) |
+| Versi | 1.2 (disetujui kandidat) |
 | Pembaca | Claude Code di VS Code (pelaksana), kandidat (pengawas dan penanggung jawab), penilai MSI (lampiran laporan A7) |
 | Tools utama | n8n, Google Sheets, API model AI, halaman web sederhana |
 | Batas pengumpulan | Senin, 9 November 2026 menurut formulir; PDF panduan menyebut Jumat, 6 November 2026. Perlu konfirmasi ke panitia. |
@@ -62,6 +62,7 @@ Kolom Visual menunjukkan exhibit yang direncanakan; section tanpa kebutuhan visu
 
 | Tanggal | Versi | Perubahan | Oleh |
 | --- | --- | --- | --- |
+| 6 Nov 2026 | 1.2 | Topik sapaan ditambahkan ke FR-02 dan pengecualian sapaan ke PJ-04: balasan salam atau pertanyaan identitas (AR-04) sebelumnya selalu ditolak pemeriksa karena tidak punya rujukan KB. Pengecualian hanya berlaku bila pertanyaan pengguna sendiri berupa sapaan pendek | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.1 | FR-23, BL-22, dan T-30 ditambahkan: AE membuat draf penawaran AI dari catatan CRM, agar A6 terpenuhi tanpa bergantung pada alur chat A1 | Kandidat, dibantu Claude |
 | 6 Nov 2026 | 1.0 | Semua section disetujui (gate G1); jadwal dipadatkan agar selesai Sabtu, 7 November malam | Kandidat, dibantu Claude |
 | 6 Nov 2026 | 0.9 | Section 1–18 diisi; model default Claude Haiku 5.5 dengan Ollama sebagai cadangan; kolom id\_permintaan ditambahkan | Kandidat, dibantu Claude |
@@ -216,7 +217,7 @@ Arti prioritas: **Must** wajib ada agar demo memenuhi soal; **Should** penting t
 | ID | Modul | Kebutuhan | Prioritas | Sprint | Dari |
 | --- | --- | --- | --- | --- | --- |
 | FR-01 | Agent | Halaman chat menerima pertanyaan beserta identitas prospek (pilih P01–P10 atau isi nama perusahaan baru) | Must | S1 | US-01–04 |
-| FR-02 | Agent | Agent mengklasifikasi pertanyaan ke topik: biaya pendaftaran, sponsorship, jaminan penghargaan, tarif, jadwal, atau lainnya | Must | S1 | US-01–04 |
+| FR-02 | Agent | Agent mengklasifikasi pertanyaan ke topik: biaya pendaftaran, sponsorship, jaminan penghargaan, tarif, jadwal, sapaan, atau lainnya | Must | S1 | US-01–04 |
 | FR-03 | Agent | Agent menjawab hanya dari KB01–KB04 dan menampilkan kode rujukan KB di setiap jawaban | Must | S1 | US-01–03 |
 | FR-04 | Agent | Pertanyaan tarif, jaminan penghargaan, jadwal spesifik, atau di luar KB dibuatkan tiket di Antrean Staf beserta alasannya | Must | S1 | US-02–04 |
 | FR-05 | Agent | Pemeriksa jawaban menolak jawaban yang memuat janji, harga, atau tanggal tanpa dasar KB dan menggantinya dengan jawaban eskalasi | Should | S1 | US-02, US-03 |
@@ -305,7 +306,7 @@ Pemeriksa berjalan setelah agent menjawab dan tidak memakai AI, sehingga hasilny
 - **PJ-01** Jawaban tidak boleh memuat nominal uang (misalnya “Rp” atau “juta”).
 - **PJ-02** Jawaban tidak boleh memuat tanggal atau nama hari spesifik.
 - **PJ-03** Jawaban tidak boleh memuat kata janji seperti “dijamin”, “pasti mendapat”, atau “bintang 5” dalam kalimat yang menyetujui.
-- **PJ-04** Jawaban tanpa eskalasi wajib punya minimal satu rujukan, dan semua rujukan harus ada di KB01–KB04.
+- **PJ-04** Jawaban tanpa eskalasi wajib punya minimal satu rujukan, dan semua rujukan harus ada di KB01–KB04. Pengecualian: balasan bertopik sapaan saja (salam, terima kasih, atau pertanyaan identitas) boleh tanpa rujukan, asalkan pertanyaan pengguna sendiri berupa sapaan pendek tanpa pertanyaan lain; PJ-01 sampai PJ-03 tetap berlaku.
 
 ### Jawaban acuan untuk pertanyaan uji
 

@@ -5,7 +5,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["biaya_pendaftaran", "sponsorship", "jaminan_penghargaan", "tarif", "jadwal", "lainnya"]
+        "enum": ["biaya_pendaftaran", "sponsorship", "jaminan_penghargaan", "tarif", "jadwal", "sapaan", "lainnya"]
       }
     },
     "jawaban": { "type": "string" },

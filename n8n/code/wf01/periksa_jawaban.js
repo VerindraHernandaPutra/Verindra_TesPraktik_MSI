@@ -3,7 +3,7 @@
 const ctx = $('Susun Prompt').first().json;
 const keluaran = $input.first().json;
 
-const cek = periksaJawaban(keluaran.keluaran_model, ctx.kode_kb_valid);
+const cek = periksaJawaban(keluaran.keluaran_model, ctx.kode_kb_valid, ctx.pertanyaan);
 
 // Pencarian prospek berdasarkan nama baru dibuat di BL-10; untuk sekarang hanya ID P01, P02, dst.
 const idProspek = /^P\d{2,}$/i.test(ctx.prospek) ? ctx.prospek.toUpperCase() : null;

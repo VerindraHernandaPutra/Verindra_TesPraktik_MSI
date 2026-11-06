@@ -39,7 +39,13 @@ scripts/    Script Python: uji otomatis dan reset seed
 3. Buat Google Spreadsheet dan impor seed — _belum diisi_
 4. Pasang kredensial di n8n — _belum diisi_
 5. Import workflow — _belum diisi_
-6. Buka halaman web — _belum diisi_
+6. **Buka halaman web.** Pastikan workflow WF-01 sudah di-publish di n8n, lalu:
+   ```
+   cd web
+   python -m http.server 8000 --bind 127.0.0.1
+   ```
+   Buka **http://localhost:8000** (bukan `127.0.0.1:8000` dan bukan membuka file langsung: webhook hanya
+   mengizinkan origin `WEB_ORIGIN` di `.env`). Alamat n8n diatur di `web/config.js`.
 7. Jalankan uji otomatis — _belum diisi_
 
 ## Keamanan

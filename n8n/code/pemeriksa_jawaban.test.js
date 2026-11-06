@@ -120,6 +120,46 @@ test('topik di luar daftar dibuang; kosong menjadi "lainnya"', () => {
   assert.deepEqual(r.hasil.topik, ['lainnya']);
 });
 
+const sapaan = (teks) => ({
+  topik: ['sapaan'],
+  jawaban: teks,
+  rujukan_kb: [],
+  eskalasi: false,
+  alasan_eskalasi: null,
+});
+
+test('sapaan murni lolos tanpa rujukan (pengecualian PJ-04)', () => {
+  const balasan = 'Halo, saya asisten simulasi layanan awards, bukan staf manusia. Silakan sampaikan pertanyaan Anda.';
+  for (const q of ['halo', 'Halo!', 'hai', 'selamat pagi', 'Assalamualaikum', 'terima kasih', 'kamu siapa?', 'siapa anda']) {
+    const r = periksaJawaban(sapaan(balasan), undefined, q);
+    assert.equal(r.lolos_pemeriksa, true, q + ' -> ' + JSON.stringify(r.pelanggaran));
+    assert.equal(r.hasil.eskalasi, false);
+  }
+});
+
+test('label "sapaan" dari AI tidak cukup bila pertanyaan pengguna bukan sapaan', () => {
+  for (const q of ['Halo, apakah harus sponsor?', 'halo harga paket berapa', 'Di mana lokasi acaranya?', 'hai, bisa dijamin bintang 5?', 'Halo saya mau tanya soal jadwal wawancara perusahaan kami minggu ini']) {
+    const r = periksaJawaban(sapaan('Acara diadakan di Jakarta.'), undefined, q);
+    assert.equal(r.lolos_pemeriksa, false, q);
+    assert.deepEqual(aturanDari(r), ['PJ-04'], q);
+  }
+});
+
+test('sapaan bercampur topik lain tetap wajib rujukan', () => {
+  const r = periksaJawaban({ ...sapaan('Halo.'), topik: ['sapaan', 'sponsorship'] }, undefined, 'halo');
+  assert.equal(r.lolos_pemeriksa, false);
+});
+
+test('balasan sapaan tetap diperiksa PJ-01 sampai PJ-03', () => {
+  const r = periksaJawaban(sapaan('Halo! Perusahaan Anda dijamin bintang 5.'), undefined, 'halo');
+  assert.equal(r.lolos_pemeriksa, false);
+  assert.ok(aturanDari(r).includes('PJ-03'));
+});
+
+test('tanpa pertanyaan, pengecualian sapaan tidak berlaku', () => {
+  assert.equal(periksaJawaban(sapaan('Halo, saya asisten simulasi.')).lolos_pemeriksa, false);
+});
+
 test('parseKeluaranModel mengambil objek JSON di tengah teks', () => {
   assert.deepEqual(parseKeluaranModel('Berikut: {"a": 1} selesai'), { a: 1 });
   assert.equal(parseKeluaranModel('tanpa json'), null);
