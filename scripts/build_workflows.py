@@ -546,7 +546,7 @@ def bangun_wf02(env: dict[str, str]) -> dict:
     nodes, koneksi = rantai_endpoint(
         env, y=300, akhiran="Panel", workflow="WF-02 Data panel", metode="GET", path="panel",
         kode_validasi=teks("n8n/code/wf02/validasi_peran.js"),
-        sheets=["Konfigurasi", "Prospek", "Percakapan", "Antrean_Staf", "Draf"],
+        sheets=["Konfigurasi", "Prospek", "Percakapan", "Antrean_Staf", "Draf", "Histori"],
         kode_proses=gabung("n8n/code/sheet_tulis.js", "n8n/code/wf02/susun_panel.js"),
         catatan_proses="FR-12, FR-15. Ringkasan per status dan per AE, antrean, draf, pengingat; tanpa nilai penjualan.",
         tulis=False,

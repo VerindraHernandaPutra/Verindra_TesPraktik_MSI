@@ -534,7 +534,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Selesai |
 | BL-22 | S3 | Endpoint POST /prospek/draf di WF-03, prompt draf penawaran, kolom catatan dan tombol Buat draf AI di tab Dashboard | CC | Draf dari catatan P03 muncul di panel staf berstatus Menunggu persetujuan; Histori mencatat draf\_dibuat | FR-23 | Selesai |
 | BL-16 | S3 | Pemilih peran yang membatasi tampilan AE | CC | AE A hanya melihat 5 prospek miliknya | FR-15 | Selesai |
-| BL-17 | S3 | Tombol Ekspor CSV prospek dan histori | CC | Isi CSV sama dengan dashboard | FR-19 | Belum |
+| BL-17 | S3 | Tombol Ekspor CSV prospek dan histori | CC | Isi CSV sama dengan dashboard | FR-19 | Selesai |
 | BL-18 | F3 | scripts/run\_tests.py yang menjalankan semua kasus uji Section 13 dan mencetak hasilnya | CC | Satu perintah menghasilkan tabel lulus/gagal yang disimpan sebagai bukti | NFR-01, NFR-04 | Selesai |
 | BL-19 | F3 | Jalankan pertanyaan uji dengan MODEL\_AI = ollama dan catat perbedaannya | K | Hasil dan waktu respons tercatat di Section 13 | KA-01 | Belum |
 | BL-20 | F3 | Rekaman demo, screenshot berurutan, ekspor workflow JSON, README final | K | Rekaman 5 menit atau kurang memuat semua uji Must; tidak ada kredensial terlihat | NFR-12 | Belum |

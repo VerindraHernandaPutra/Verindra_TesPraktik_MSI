@@ -1,8 +1,8 @@
 // WF-02 node "Susun Panel" (FR-12, FR-15; kontrak GET /panel Section 10). Mode: Run Once for All Items.
 // Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini (AKTOR, STATUS_PIPELINE).
 // Tanpa nilai penjualan (Section 2). AE hanya melihat prospek miliknya beserta tiket dan drafnya.
-const peran = $('Validasi Panel').first().json.peran;
-const T = $('Olah Sheet Panel').first().json.tabel;
+const { peran, ekspor } = $('Validasi Panel').first().json;
+const { tabel: T, header } = $('Olah Sheet Panel').first().json;
 
 const konfig = Object.fromEntries(T.Konfigurasi.map((r) => [String(r.kunci).trim(), String(r.nilai ?? '').trim()]));
 const tanggal = konfig.TANGGAL_SIMULASI || '';
@@ -70,6 +70,15 @@ for (const p of terlihat) {
 }
 const urutTanggal = (a, b) => a.tgl_tindak_lanjut.localeCompare(b.tgl_tindak_lanjut);
 
+// FR-19: baris lengkap sesuai header sheet (tanpa kolom bantu _baris), tersaring per peran.
+const barisLengkap = (sheet, daftar) => daftar.map((r) => header[sheet].map((k) => r[k] ?? ''));
+const dataEkspor = ekspor
+  ? {
+      prospek: { kolom: header.Prospek, baris: barisLengkap('Prospek', terlihat) },
+      histori: { kolom: header.Histori, baris: barisLengkap('Histori', T.Histori.filter((h) => idTerlihat.has(h.id_prospek))) },
+    }
+  : undefined;
+
 return [
   {
     json: {
@@ -83,6 +92,7 @@ return [
       draf_disetujui: daftarDraf('Disetujui'),
       pengingat: pengingat.sort(urutTanggal),
       tindak_lanjut_mendatang: tindak_lanjut_mendatang.sort(urutTanggal),
+      ekspor: dataEkspor,
     },
   },
 ];
