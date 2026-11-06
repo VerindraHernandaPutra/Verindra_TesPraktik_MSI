@@ -20,7 +20,6 @@ scripts/    Script Python: uji otomatis dan reset seed
 - Docker Desktop (atau Docker Engine + Compose v2)
 - Python 3.11 atau lebih baru (untuk `scripts/`)
 - Akun Google (Google Sheets) dan API key Claude — dipasang di n8n, bukan di repo
-- Ollama (opsional, model cadangan)
 
 ## Langkah setup
 
@@ -34,7 +33,6 @@ scripts/    Script Python: uji otomatis dan reset seed
    docker compose up -d
    ```
    Buka http://localhost:5678 dan buat akun owner lokal. Port hanya terbuka di localhost.
-   Untuk Ollama, pakai Base URL `http://host.docker.internal:11434` (bukan `localhost`).
    Menghentikan: `docker compose down` (data n8n tetap tersimpan di volume `n8n_data`).
 3. Buat Google Spreadsheet dan impor seed — _belum diisi_
 4. Pasang kredensial di n8n — _belum diisi_
@@ -56,7 +54,7 @@ scripts/    Script Python: uji otomatis dan reset seed
 7. **Jalankan uji otomatis.** Uji dimulai dengan reset seed (semua data demo ditulis ulang dari `seed/`):
    ```
    python scripts/run_tests.py          # minta konfirmasi RESET
-   python scripts/run_tests.py --ya --ollama   # tanpa konfirmasi, plus perbandingan Ollama (T-27)
+   python scripts/run_tests.py --ya     # tanpa konfirmasi
    ```
    Hasil tersimpan di `bukti/hasil_uji_<waktu>.txt` dan `.json`. Uji unit tanpa n8n: `node --test "n8n/code/*.test.js"`.
    Reset saja: `python scripts/reset_seed.py`.

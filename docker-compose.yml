@@ -1,9 +1,7 @@
 # SIMULASI MSI — n8n lokal untuk demo MSI-A1A6 (BL-04, NFR-09).
 # Jalankan: docker compose up -d   lalu buka http://localhost:5678
 #
-# Catatan Ollama (cadangan model AI, KA-01):
-#   Dari dalam container, Ollama di laptop TIDAK bisa diakses lewat localhost.
-#   Pakai http://host.docker.internal:11434 sebagai Base URL kredensial "Ollama lokal (demo)".
+# host.docker.internal: alamat laptop dilihat dari dalam container (cadangan Ollama dihapus di versi 1.4).
 #   Windows/macOS (Docker Desktop) sudah mengenal host.docker.internal;
 #   untuk Linux, pemetaan extra_hosts di bawah yang membuatnya bekerja.
 

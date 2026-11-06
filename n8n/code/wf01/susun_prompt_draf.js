@@ -27,24 +27,12 @@ const system = PROMPT_DRAF.replace('[[DAFTAR_KB]]', () => s.daftar_kb)
   .replace('[[PERCAKAPAN]]', () => percakapan);
 const perintah = 'Susun draf follow-up sesuai aturan di atas.';
 
-const body =
-  s.model_ai === 'ollama'
-    ? {
-        model: CFG.model_ollama,
-        stream: false,
-        format: SKEMA_DRAF,
-        options: { temperature: 0.1 },
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: perintah },
-        ],
-      }
-    : {
-        model: CFG.model_claude,
-        max_tokens: 1500,
-        system,
-        messages: [{ role: 'user', content: perintah }],
-        output_config: { effort: 'low', format: { type: 'json_schema', schema: SKEMA_DRAF } },
-      };
+const body = {
+  model: CFG.model_claude,
+  max_tokens: 1500,
+  system,
+  messages: [{ role: 'user', content: perintah }],
+  output_config: { effort: 'low', format: { type: 'json_schema', schema: SKEMA_DRAF } },
+};
 
-return [{ json: { model_ai: s.model_ai, body_model: body } }];
+return [{ json: { body_model: body } }];

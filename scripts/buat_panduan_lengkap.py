@@ -64,7 +64,6 @@ Panduan ini membawa Anda dari folder kosong sampai aplikasi berjalan dan **27 uj
 | **Google Sheets** | Database: KB, prospek, percakapan, draf, histori | Sesuai jobdesk Google Workspace; penilai bisa melihat data langsung; tanpa server database | PostgreSQL/Airtable (perlu setup tambahan) |
 | **Google Cloud Platform** | Memberi izin n8n membaca dan menulis Sheets atas nama akun Anda | Google mewajibkan setiap aplikasi yang memakai Sheets API terdaftar sebagai project dengan OAuth client; tanpa itu Google menolak akses | Service account (perlu membagikan sheet ke email robot; OAuth lebih sederhana untuk akun pribadi) |
 | **Claude API (Haiku 5.5)** | Menjawab pertanyaan dan menyusun draf | Murah dan cepat untuk tugas sempit (4 butir KB); patuh instruksi; mendukung structured outputs (JSON dijamin valid) | Model lebih besar (lebih mahal, tidak perlu untuk tugas ini) |
-| **Ollama** (opsional) | Model AI cadangan di laptop | Tetap jalan bila API tidak tersedia; data tidak keluar dari laptop | — |
 | **Python** | Script perakit, deploy, reset, dan uji | Sudah terpasang di banyak laptop; cukup pustaka bawaan, tanpa `pip install` | — |
 | **Node.js** | Uji unit kode JavaScript | Kode Code node n8n berupa JavaScript; Node menjalankannya di luar n8n untuk diuji | — |
 | **Git** | Riwayat perubahan | Satu commit per langkah; mudah kembali bila ada kesalahan | — |
@@ -99,7 +98,6 @@ Panduan ini membawa Anda dari folder kosong sampai aplikasi berjalan dan **27 uj
 | Python 3.11+ | python.org (centang *Add to PATH*) | `python --version` |
 | Node.js 20+ | nodejs.org (LTS) | `node --version` |
 | VS Code | code.visualstudio.com | – |
-| Ollama (opsional) | ollama.com | `ollama pull qwen2.5:3b` |
 
 Siapkan juga: **akun Google** pribadi dan **API key Claude** dari console.anthropic.com (menu *API Keys*, akun harus punya saldo).
 
@@ -309,7 +307,6 @@ Menempelkan URL callback ke kolom origins menghasilkan error *"Invalid Origin: U
 | --- | --- | --- |
 | `Claude API (demo)` | Anthropic | API Key dari console.anthropic.com |
 | `Google Sheets (demo)` | Google Sheets OAuth2 API | Client ID + Client Secret dari 4.1 → **Sign in with Google** → pilih akun → "Google hasn't verified this app" → **Continue** → centang semua izin |
-| `Ollama lokal (demo)` (opsional) | Ollama | Base URL `http://host.docker.internal:11434` |
 
 **Titik cek:** setiap kredensial menampilkan pesan hijau (*Connection tested successfully* / *Account connected*).
 
@@ -372,6 +369,7 @@ Kode JavaScript yang dipakai banyak workflow. Setiap modul punya file uji `*.tes
         ("n8n/code/olah_data_sheet.js", "Mengubah respons `spreadsheets.get` menjadi tabel objek per kolom."),
         ("n8n/code/siapkan_log_error.js", "Node awal jalur gagal: mencatat node asal error."),
         ("n8n/code/susun_baris_log.js", "Node yang menyusun baris Log_Error."),
+        ("n8n/code/data_log.js", "Langkah yang mengambil baris Log_Error dari data yang sudah dibaca (nomor id_error)."),
         ("n8n/code/periksa_draf.js", "Pemeriksa untuk draf AI (follow-up dan penawaran)."),
     ))
     tambah("""
@@ -387,7 +385,7 @@ Hasil yang benar di akhir keluaran: `pass 43` dan `fail 0`. Bila ada yang gagal,
 
 ## Langkah 7 – Kode setiap workflow
 
-Setiap file di bawah menjadi isi satu Code node di n8n. Folder menunjukkan workflow pemiliknya.
+Setiap file di bawah adalah satu *langkah*. Saat dirakit, beberapa langkah yang berurutan digabung ke dalam satu Code node (*node gabungan*) agar kanvas n8n sederhana; file tetap terpisah agar mudah dibaca dan diuji. Folder menunjukkan workflow pemiliknya.
 
 > **Kenapa?**
 > - **Kode node ditulis sebagai file `.js`**, bukan langsung di editor n8n, agar bisa dibaca, dibandingkan, diuji, dan dilacak git. Script perakit menempelkannya ke workflow.
@@ -402,8 +400,8 @@ Setiap file di bawah menjadi isi satu Code node di n8n. Folder menunjukkan workf
         ("validasi_masukan", "Langkah 1: membaca dan memvalidasi body permintaan."),
         ("cek_permintaan_lama", "Idempotensi: id_permintaan yang sudah tercatat mengembalikan jawaban lama."),
         ("cari_prospek", "Mencari prospek per ID atau kunci_normal; menyiapkan prospek baru."),
-        ("susun_prompt", "Menyisipkan KB ke prompt dan menyusun body Claude/Ollama."),
-        ("ambil_teks_model", "Menyamakan respons Claude dan Ollama."),
+        ("susun_prompt", "Menyisipkan KB ke prompt dan menyusun body permintaan Claude."),
+        ("ambil_teks_model", "Mengambil teks jawaban dari respons Claude."),
         ("periksa_jawaban", "Menjalankan pemeriksa pada jawaban agent."),
         ("susun_prompt_draf", "Menyusun prompt draf follow-up."),
         ("cek_mode_gagal", "Error buatan bila MODE_GAGAL = TRUE (demo kegagalan)."),
@@ -460,7 +458,7 @@ Setiap file di bawah menjadi isi satu Code node di n8n. Folder menunjukkan workf
 python scripts/build_workflows.py
 ```
 
-**Titik cek:** enam baris `Ditulis:` muncul, yaitu WF-01 (33 node), WF-02 (13), WF-03 (51), WF-04 (16), WF-05 (5), WF-90 (34). Bila muncul "Nilai berikut belum diisi di .env", lengkapi `.env` (Langkah 1.3 dan 4).
+**Titik cek:** enam baris `Ditulis:` muncul, yaitu WF-01 (15 node), WF-02 (7), WF-03 (32), WF-04 (13), WF-05 (4), WF-90 (23). Bila muncul "Nilai berikut belum diisi di .env", lengkapi `.env` (Langkah 1.3 dan 4).
 
 **9.2 Import WF-01 sekali secara manual** (agar script deploy punya contoh kredensial untuk diwariskan)
 
@@ -546,7 +544,7 @@ python scripts/run_tests.py
 
 Ketik `RESET` saat diminta. Script mereset data lalu menjalankan 27 uji (sekitar 5 menit).
 
-**Titik cek akhir:** baris terakhir `27/27 lulus` dan file hasil di `bukti/hasil_uji_<waktu>.txt`. Untuk perbandingan dengan Ollama tambahkan `--ollama`.
+**Titik cek akhir:** baris terakhir `27/27 lulus` dan file hasil di `bukti/hasil_uji_<waktu>.txt`.
 
 Simpan pekerjaan ke git:
 

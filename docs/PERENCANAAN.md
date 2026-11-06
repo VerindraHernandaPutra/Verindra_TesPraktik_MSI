@@ -4,14 +4,14 @@ Nov 6, 2026 · @ren
 
 ## 0. Info dokumen
 
-Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.3, disesuaikan dengan implementasi (versi 1.1 disetujui kandidat pada 6 November 2026); target selesai Sabtu, 7 November malam.
+Dokumen ini adalah satu-satunya rencana kerja untuk demo utama tes praktik MSI: AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets. Statusnya versi 1.4, disesuaikan dengan implementasi (versi 1.1 disetujui kandidat pada 6 November 2026); target selesai Sabtu, 7 November malam.
 
 | Atribut | Isi |
 | --- | --- |
 | Nama proyek | AI Agent Layanan & CRM Awards (Simulasi MSI) |
 | Kode proyek | MSI-A1A6 |
 | Tugas yang dicakup | A1 sebagai demo utama (perilaku agent) + A6 (database dan pipeline) |
-| Versi | 1.3 (disesuaikan dengan implementasi) |
+| Versi | 1.4 (disesuaikan dengan implementasi) |
 | Pembaca | Claude Code di VS Code (pelaksana), kandidat (pengawas dan penanggung jawab), penilai MSI (lampiran laporan A7) |
 | Tools utama | n8n, Google Sheets, API model AI, halaman web sederhana |
 | Batas pengumpulan | Senin, 9 November 2026 menurut formulir; PDF panduan menyebut Jumat, 6 November 2026. Perlu konfirmasi ke panitia. |
@@ -62,6 +62,7 @@ Kolom Visual menunjukkan exhibit yang direncanakan; section tanpa kebutuhan visu
 
 | Tanggal | Versi | Perubahan | Oleh |
 | --- | --- | --- | --- |
+| 6 Nov 2026 | 1.4 | Workflow disederhanakan dengan node gabungan (WF-01 dari 33 menjadi 15 node, WF-03 dari 51 menjadi 32) tanpa mengubah perilaku (27/27 uji tetap lulus); cadangan Ollama dihapus agar alur lebih sederhana: KA-01 diubah, BL-19 dan T-27 dibatalkan dan dicatat sebagai pengembangan lanjut | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.3 | Disesuaikan dengan implementasi: (1) NFR-07 dan tech stack, Claude Haiku 5.5 menolak parameter temperature sehingga konsistensi dijaga dengan effort rendah dan structured outputs (T-08 lulus); (2) KA-05 sampai KA-07, baca dan tulis Sheets lewat satu panggilan API atomik per permintaan, workflow dirakit dari sumber di repo dan dipasang lewat n8n Public API, WF-90 utilitas uji; (3) kontrak API, keputusan siap\_kirim di /approve, kolom berulang di /chat, data tambahan dan ekspor di /panel, endpoint POST /pengingat; (4) struktur repo dan panduan staf | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.2 | Topik sapaan ditambahkan ke FR-02 dan pengecualian sapaan ke PJ-04: balasan salam atau pertanyaan identitas (AR-04) sebelumnya selalu ditolak pemeriksa karena tidak punya rujukan KB. Pengecualian hanya berlaku bila pertanyaan pengguna sendiri berupa sapaan pendek | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.1 | FR-23, BL-22, dan T-30 ditambahkan: AE membuat draf penawaran AI dari catatan CRM, agar A6 terpenuhi tanpa bergantung pada alur chat A1 | Kandidat, dibantu Claude |
@@ -346,12 +347,13 @@ Halaman web tidak pernah memegang API key; semua kredensial hanya ada di n8n. De
 
 | ID | Keputusan | Status | Catatan |
 | --- | --- | --- | --- |
-| KA-01 | Penyedia model AI: Claude sebagai utama, Ollama lokal sebagai cadangan | Diputuskan | Node model dipisah dari alur agar bisa diganti tanpa mengubah workflow; Ollama dipakai jika API tidak tersedia atau untuk dokumen yang tidak boleh keluar dari laptop. Pemeriksa jawaban PJ-01–PJ-04 tetap menjaga kedua model |
+| KA-01 | Penyedia model AI: Claude sebagai utama, Ollama lokal sebagai cadangan | Diubah (1.4): hanya Claude; Ollama menjadi pengembangan lanjut | Node model dipisah dari alur agar bisa diganti tanpa mengubah workflow; Ollama dipakai jika API tidak tersedia atau untuk dokumen yang tidak boleh keluar dari laptop. Pemeriksa jawaban PJ-01–PJ-04 tetap menjaga kedua model |
 | KA-02 | Halaman chat dibuat sendiri, bukan chat bawaan n8n | Diputuskan | Satu halaman untuk chat dan panel; chat bawaan n8n menjadi cadangan jika waktu habis |
 | KA-03 | Penulisan bersamaan ke Sheets tidak dikunci | Diterima sebagai batasan | Demo dijalankan satu pengguna; untuk produksi perlu database dengan transaksi |
 | KA-04 | Workflow disimpan sebagai file JSON di repo | Diputuskan | Claude Code tidak bisa mengklik kanvas n8n, tetapi bisa menulis JSON yang di-import kandidat |
 | KA-05 | Satu baca (spreadsheets.get) dan satu tulis (spreadsheets.batchUpdate) per permintaan | Diputuskan | Node Sheets satu per satu butuh sekitar 1 detik per panggilan; batchUpdate diterapkan atomik sehingga kegagalan tidak meninggalkan data setengah tertulis. Respons turun ke 6–8 detik |
 | KA-06 | Workflow dirakit dari sumber dan dipasang lewat API | Diputuskan | scripts/build\_workflows.py merakit prompt, kode Code node, dan .env menjadi JSON; scripts/deploy\_workflows.py memasangnya lewat n8n Public API dan mempertahankan kredensial |
+| KA-08 | Node gabungan: langkah berurutan dijalankan dalam satu Code node | Diputuskan | Kanvas n8n lebih mudah dibaca dan dijelaskan; setiap langkah tetap file terpisah yang bisa diuji |
 | KA-07 | WF-90 utilitas uji (reset seed, ubah Konfigurasi, baca data) | Diputuskan | Dipakai run\_tests.py; dilindungi Header Auth X-Reset-Token yang hanya ada di .env dan credential store n8n |
 
 ## 9. Desain data
@@ -542,7 +544,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-16 | S3 | Pemilih peran yang membatasi tampilan AE | CC | AE A hanya melihat 5 prospek miliknya | FR-15 | Selesai |
 | BL-17 | S3 | Tombol Ekspor CSV prospek dan histori | CC | Isi CSV sama dengan dashboard | FR-19 | Selesai |
 | BL-18 | F3 | scripts/run\_tests.py yang menjalankan semua kasus uji Section 13 dan mencetak hasilnya | CC | Satu perintah menghasilkan tabel lulus/gagal yang disimpan sebagai bukti | NFR-01, NFR-04 | Selesai |
-| BL-19 | F3 | Jalankan pertanyaan uji dengan MODEL\_AI = ollama dan catat perbedaannya | K | Hasil dan waktu respons tercatat di Section 13 | KA-01 | Belum |
+| BL-19 | F3 | Jalankan pertanyaan uji dengan MODEL\_AI = ollama dan catat perbedaannya | K | Hasil dan waktu respons tercatat di Section 13 | KA-01 | Dibatalkan (1.4: Ollama dihapus) |
 | BL-20 | F3 | Rekaman demo, screenshot berurutan, ekspor workflow JSON, README final | K | Rekaman 5 menit atau kurang memuat semua uji Must; tidak ada kredensial terlihat | NFR-12 | Belum |
 | BL-21 | F3 | Laporan A7 (A1–A6, termasuk rancangan berlabel untuk A2–A5) dan isian formulir | CC + K | Gate G4: semua tautan bisa dibuka tanpa login | Section 16 | Belum |
 
@@ -614,7 +616,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-24 | Akses | GET /panel sebagai ae\_a | Hanya 5 prospek milik AE A | O | FR-15 | Lulus (6 Nov 2026, seed bersih): ae_a hanya P01, P03, P05, P07, P09 (API dan pemilih peran Dashboard); ae_b hanya 5 prospek AE B |
 | T-25 | Bukti | Ekspor CSV dari dashboard | Isi CSV sama dengan sheet Prospek dan Histori | M | FR-19 | Belum diuji |
 | T-26 | Kinerja | Waktu respons T-01 dengan Claude, rata-rata 3 kali | 10 detik atau kurang | O | NFR-06 | Lulus (6 Nov 2026, run_tests.py): rata-rata 6,6 detik (6,0; 6,6; 7,0) |
-| T-27 | Model | T-01 sampai T-06 dengan MODEL\_AI = ollama | Hasil lulus/gagal dan waktu respons tercatat; perbedaan dengan Claude dijelaskan | O | KA-01 | Belum diuji |
+| T-27 | Model | T-01 sampai T-06 dengan MODEL\_AI = ollama | Hasil lulus/gagal dan waktu respons tercatat; perbedaan dengan Claude dijelaskan | O | KA-01 | Dibatalkan (1.4: Ollama dihapus; pengembangan lanjut) |
 | T-28 | Keamanan | Cari pola API key di repo dan periksa setiap screenshot | Tidak ada kredensial ditemukan | M | NFR-02 | Sebagian (6 Nov 2026, run_tests.py): repo bersih dari pola kunci, nilai .env tidak ada di repo, .env tidak dilacak git; pemeriksaan screenshot menunggu BL-20 |
 | T-29 | KB | Ubah isi KB03 di sheet, ajukan T-01, lalu kembalikan | Jawaban mengikuti isi KB yang baru tanpa mengubah workflow | M | FR-18 | Belum diuji |
 | T-30 | Draf | AE A menambah catatan pada P03 (“Perlu mengonfirmasi apakah perusahaan ingin informasi program awards”), lalu menekan Buat draf AI | Draf penawaran berstatus Menunggu persetujuan dan tampil di panel staf; tidak menjanjikan harga atau penghargaan; kebutuhan tetap Belum terkonfirmasi; Histori tercatat | O | FR-23 | Lulus (6 Nov 2026): AE A + catatan P03 menghasilkan D0002 Menunggu persetujuan di panel staf; tanpa harga/janji; kebutuhan tetap Belum terkonfirmasi; Histori draf_dibuat |

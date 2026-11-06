@@ -22,7 +22,7 @@
         0,
         160
       ],
-      "notes": "FR-11. Setiap hari pukul 08.00 (zona waktu workflow Asia/Jakarta)."
+      "notes": "Setiap hari pukul 08.00 (zona waktu workflow Asia/Jakarta)."
     },
     {
       "parameters": {},
@@ -53,13 +53,13 @@
         0,
         480
       ],
-      "notes": "POST /pengingat: tombol Jalankan pengingat di Dashboard. Idempoten; hanya menulis kolom pengingat.",
+      "notes": "Tombol Jalankan pengingat di Dashboard.",
       "webhookId": "9faf1d3b-0a15-5744-9110-53c05a7ca934"
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?includeGridData=true&ranges=Konfigurasi&ranges=Prospek&fields=sheets%28properties%28sheetId%2Ctitle%29%2Cdata%28rowData%28values%28formattedValue%29%29%29%29",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?includeGridData=true&ranges=Konfigurasi&ranges=Prospek&ranges=Log_Error&fields=sheets%28properties%28sheetId%2Ctitle%29%2Cdata%28rowData%28values%28formattedValue%29%29%29%29",
         "options": {
           "timeout": 30000
         },
@@ -74,37 +74,22 @@
         220,
         320
       ],
-      "notes": "Konfigurasi dan Prospek dalam SATU panggilan.",
+      "notes": "Sheet Konfigurasi, Prospek, Log_Error dalam SATU panggilan spreadsheets.get.",
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Node \"Olah Data Sheet\" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:\n//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}\n//   header[sheet] = urutan kolom (dipakai saat menulis)\n//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)\n// SHEET_WAJIB diisi saat dirakit.\nconst SHEET_WAJIB = [\n  \"Konfigurasi\",\n  \"Prospek\"\n];\n\nconst res = $input.first().json;\nconst tabel = {};\nconst header = {};\nconst gid = {};\n\nfor (const sh of res.sheets || []) {\n  const judul = sh.properties.title;\n  gid[judul] = sh.properties.sheetId;\n  const baris = ((sh.data && sh.data[0] && sh.data[0].rowData) || []).map((r) =>\n    (r.values || []).map((c) => (c && c.formattedValue != null ? String(c.formattedValue) : ''))\n  );\n  const kolom = (baris[0] || []).map((k) => k.trim());\n  header[judul] = kolom;\n  tabel[judul] = baris\n    .map((r, i) => ({ r, nomor: i + 1 }))\n    .slice(1)\n    .filter(({ r }) => r.some((v) => v.trim() !== ''))\n    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));\n}\n\nconst hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);\nif (hilang.length) throw new Error('Sheet tidak ditemukan atau tanpa header: ' + hilang.join(', '));\n\nreturn [{ json: { tabel, header, gid } }];\n"
+        "jsCode": "// NODE GABUNGAN (dirakit oleh scripts/build_workflows.py). Setiap langkah = satu file di n8n/code/.\n// Rujukan $('Nama Node') ditulis eksplisit agar task runner n8n mengirim data node tersebut.\nconst __nyata = { \"Jadwal 08.00\": () => $('Jadwal 08.00'), \"Jalankan Manual\": () => $('Jalankan Manual'), \"Terima Jalankan\": () => $('Terima Jalankan'), \"Baca Sheet Pengingat\": () => $('Baca Sheet Pengingat'), \"Ada Perubahan?\": () => $('Ada Perubahan?'), \"Tulis Pengingat\": () => $('Tulis Pengingat'), \"Dari Webhook?\": () => $('Dari Webhook?'), \"Kirim Hasil Pengingat\": () => $('Kirim Hasil Pengingat'), \"Catat Gagal\": () => $('Catat Gagal'), \"Tulis Log Error\": () => $('Tulis Log Error'), \"Gagal Dari Webhook?\": () => $('Gagal Dari Webhook?'), \"Kirim Respons Gagal\": () => $('Kirim Respons Gagal') };\nconst __asli = (n) => (n in __nyata ? __nyata[n]() : $(n));\nconst __peta = {\"Siapkan Log Error\": \"Catat Gagal\", \"Data Log\": \"Catat Gagal\", \"Susun Baris Log\": \"Catat Gagal\"};\nconst __lokal = [\"Olah Sheet Pengingat\", \"Tandai Pengingat\"];\nconst __hasil = {};\nconst __tidakJalan = (n) => ({ isExecuted: false, first: () => { throw new Error('Langkah ' + n + ' tidak dijalankan.'); }, all: () => [] });\nfunction __ref(n) {\n  if (n in __hasil) return { isExecuted: true, first: () => __hasil[n][0], all: () => __hasil[n] };\n  if (__lokal.includes(n)) return __tidakJalan(n);\n  if (n in __peta) {\n    const nyata = __asli(__peta[n]);\n    if (!nyata.isExecuted) return __tidakJalan(n);\n    const j = (nyata.first().json.__langkah || {})[n];\n    if (j === undefined) return __tidakJalan(n);\n    return { isExecuted: true, first: () => ({ json: j }), all: () => [{ json: j }] };\n  }\n  return __asli(n);\n}\nconst __masuk = (items) => ({ first: () => items[0], all: () => items });\nfunction __jalan(nama, fn, items) {\n  try {\n    const out = fn(__ref, __masuk(items));\n    __hasil[nama] = out;\n    return out;\n  } catch (e) {\n    e.message = '[' + nama + '] ' + e.message;\n    throw e;\n  }\n}\nconst __selesai = (json) => [{\n  json: { ...json, __langkah: Object.fromEntries(Object.entries(__hasil).map(([k, v]) => [k, v[0] && v[0].json])) },\n}];\nlet __data = $input.all();\n\n// ===== langkah: Olah Sheet Pengingat =====\n__data = __jalan(\"Olah Sheet Pengingat\", function ($, $input) {\n// Node \"Olah Data Sheet\" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:\n//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}\n//   header[sheet] = urutan kolom (dipakai saat menulis)\n//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)\n// SHEET_WAJIB diisi saat dirakit.\nconst SHEET_WAJIB = [\n  \"Konfigurasi\",\n  \"Prospek\",\n  \"Log_Error\"\n];\n\nconst res = $input.first().json;\nconst tabel = {};\nconst header = {};\nconst gid = {};\n\nfor (const sh of res.sheets || []) {\n  const judul = sh.properties.title;\n  gid[judul] = sh.properties.sheetId;\n  const baris = ((sh.data && sh.data[0] && sh.data[0].rowData) || []).map((r) =>\n    (r.values || []).map((c) => (c && c.formattedValue != null ? String(c.formattedValue) : ''))\n  );\n  const kolom = (baris[0] || []).map((k) => k.trim());\n  header[judul] = kolom;\n  tabel[judul] = baris\n    .map((r, i) => ({ r, nomor: i + 1 }))\n    .slice(1)\n    .filter(({ r }) => r.some((v) => v.trim() !== ''))\n    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));\n}\n\nconst hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);\nif (hilang.length) throw new Error('Sheet tidak ditemukan atau tanpa header: ' + hilang.join(', '));\n\nreturn [{ json: { tabel, header, gid } }];\n\n}, $input.all());\n\n// ===== langkah: Tandai Pengingat =====\n__data = __jalan(\"Tandai Pengingat\", function ($, $input) {\n// SIMULASI MSI — Penyusun permintaan spreadsheets.batchUpdate (WF-01, WF-03).\n// Semua perubahan satu permintaan dikirim dalam satu batchUpdate, yang diterapkan Google secara atomik.\n// D = keluaran node \"Olah Data Sheet\" ({tabel, header, gid}). Baris module.exports hanya untuk uji unit.\n\nconst AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };\nconst STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];\nconst STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)'];\n\nfunction nomorBerikut(baris, kolom) {\n  return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n}\n\nfunction idBaru(awalan, nomor) {\n  return awalan + String(nomor).padStart(4, '0');\n}\n\nfunction sel(v) {\n  return typeof v === 'boolean'\n    ? { userEnteredValue: { boolValue: v } }\n    : { userEnteredValue: { stringValue: v == null ? '' : String(v) } };\n}\n\n// Menambah baris di akhir sheet; kolom mengikuti urutan header sheet itu sendiri.\nfunction tambahBaris(D, sheet, daftar) {\n  const kolom = D.header[sheet];\n  if (!kolom) throw new Error(`Sheet ${sheet} tidak dibaca.`);\n  for (const b of daftar) {\n    const asing = Object.keys(b).filter((k) => !kolom.includes(k));\n    if (asing.length) throw new Error(`Kolom ${asing.join(', ')} tidak ada di header sheet ${sheet}.`);\n  }\n  return {\n    appendCells: {\n      sheetId: D.gid[sheet],\n      rows: daftar.map((b) => ({ values: kolom.map((k) => sel(b[k])) })),\n      fields: 'userEnteredValue',\n    },\n  };\n}\n\n// Mengubah sel tertentu pada baris yang sudah ada (objek dari tabel, membawa _baris).\nfunction ubahSel(D, sheet, objek, perubahan) {\n  if (!objek || !objek._baris || objek._baris < 2) throw new Error(`Baris ${sheet} tidak valid untuk diubah.`);\n  return Object.entries(perubahan).map(([k, v]) => {\n    const c = D.header[sheet].indexOf(k);\n    if (c < 0) throw new Error(`Kolom ${k} tidak ada di header sheet ${sheet}.`);\n    return {\n      updateCells: {\n        range: {\n          sheetId: D.gid[sheet],\n          startRowIndex: objek._baris - 1,\n          endRowIndex: objek._baris,\n          startColumnIndex: c,\n          endColumnIndex: c + 1,\n        },\n        rows: [{ values: [sel(v)] }],\n        fields: 'userEnteredValue',\n      },\n    };\n  });\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };\n}\n\n// WF-04 node \"Tandai Pengingat\" (FR-11). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini (ubahSel).\n// Mengisi kolom pengingat di Prospek berdasarkan TANGGAL_SIMULASI (Konfigurasi):\n//   tgl_tindak_lanjut <  TANGGAL_SIMULASI -> \"Terlewat\"\n//   tgl_tindak_lanjut == TANGGAL_SIMULASI -> \"Jatuh tempo hari ini\"\n//   lainnya (termasuk tanpa tanggal)      -> kosong\n// Hanya sel yang berubah yang ditulis, sehingga menjalankan ulang tanpa perubahan data tidak menulis apa pun.\nconst D = $('Olah Sheet Pengingat').first().json;\nconst T = D.tabel;\n\nconst konfig = Object.fromEntries(T.Konfigurasi.map((r) => [String(r.kunci).trim(), String(r.nilai ?? '').trim()]));\nconst tanggal = konfig.TANGGAL_SIMULASI;\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(tanggal || '')) {\n  throw new Error('TANGGAL_SIMULASI di sheet Konfigurasi harus berformat YYYY-MM-DD.');\n}\n\nconst requests = [];\nconst ditandai = [];\nfor (const p of T.Prospek.filter((r) => String(r.id_prospek || '').trim())) {\n  const tgl = String(p.tgl_tindak_lanjut || '').trim();\n  let label = '';\n  if (tgl && tgl < tanggal) label = 'Terlewat';\n  else if (tgl && tgl === tanggal) label = 'Jatuh tempo hari ini';\n\n  if (label) ditandai.push({ id_prospek: p.id_prospek, nama_perusahaan: p.nama_perusahaan, ae: p.ae, tgl_tindak_lanjut: tgl, pengingat: label });\n  if (String(p.pengingat || '').trim() !== label) requests.push(...ubahSel(D, 'Prospek', p, { pengingat: label }));\n}\n\nreturn [\n  {\n    json: {\n      tanggal_simulasi: tanggal,\n      ditandai,\n      sel_berubah: requests.length,\n      body_tulis: { requests },\n    },\n  },\n];\n\n}, __data);\n\nreturn __selesai(__data[0].json);\n"
       },
-      "id": "729fdc60-f1d1-5051-9eb0-3e9679277c2b",
-      "name": "Olah Sheet Pengingat",
+      "id": "0377df08-c32e-5c0f-8f66-1664dc7def70",
+      "name": "Proses Pengingat",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         440,
         320
       ],
-      "notes": "Baris sheet menjadi objek (+ nomor baris).",
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// SIMULASI MSI — Penyusun permintaan spreadsheets.batchUpdate (WF-01, WF-03).\n// Semua perubahan satu permintaan dikirim dalam satu batchUpdate, yang diterapkan Google secara atomik.\n// D = keluaran node \"Olah Data Sheet\" ({tabel, header, gid}). Baris module.exports hanya untuk uji unit.\n\nconst AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };\nconst STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];\nconst STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)'];\n\nfunction nomorBerikut(baris, kolom) {\n  return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n}\n\nfunction idBaru(awalan, nomor) {\n  return awalan + String(nomor).padStart(4, '0');\n}\n\nfunction sel(v) {\n  return typeof v === 'boolean'\n    ? { userEnteredValue: { boolValue: v } }\n    : { userEnteredValue: { stringValue: v == null ? '' : String(v) } };\n}\n\n// Menambah baris di akhir sheet; kolom mengikuti urutan header sheet itu sendiri.\nfunction tambahBaris(D, sheet, daftar) {\n  const kolom = D.header[sheet];\n  if (!kolom) throw new Error(`Sheet ${sheet} tidak dibaca.`);\n  for (const b of daftar) {\n    const asing = Object.keys(b).filter((k) => !kolom.includes(k));\n    if (asing.length) throw new Error(`Kolom ${asing.join(', ')} tidak ada di header sheet ${sheet}.`);\n  }\n  return {\n    appendCells: {\n      sheetId: D.gid[sheet],\n      rows: daftar.map((b) => ({ values: kolom.map((k) => sel(b[k])) })),\n      fields: 'userEnteredValue',\n    },\n  };\n}\n\n// Mengubah sel tertentu pada baris yang sudah ada (objek dari tabel, membawa _baris).\nfunction ubahSel(D, sheet, objek, perubahan) {\n  if (!objek || !objek._baris || objek._baris < 2) throw new Error(`Baris ${sheet} tidak valid untuk diubah.`);\n  return Object.entries(perubahan).map(([k, v]) => {\n    const c = D.header[sheet].indexOf(k);\n    if (c < 0) throw new Error(`Kolom ${k} tidak ada di header sheet ${sheet}.`);\n    return {\n      updateCells: {\n        range: {\n          sheetId: D.gid[sheet],\n          startRowIndex: objek._baris - 1,\n          endRowIndex: objek._baris,\n          startColumnIndex: c,\n          endColumnIndex: c + 1,\n        },\n        rows: [{ values: [sel(v)] }],\n        fields: 'userEnteredValue',\n      },\n    };\n  });\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };\n}\n\n// WF-04 node \"Tandai Pengingat\" (FR-11). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini (ubahSel).\n// Mengisi kolom pengingat di Prospek berdasarkan TANGGAL_SIMULASI (Konfigurasi):\n//   tgl_tindak_lanjut <  TANGGAL_SIMULASI -> \"Terlewat\"\n//   tgl_tindak_lanjut == TANGGAL_SIMULASI -> \"Jatuh tempo hari ini\"\n//   lainnya (termasuk tanpa tanggal)      -> kosong\n// Hanya sel yang berubah yang ditulis, sehingga menjalankan ulang tanpa perubahan data tidak menulis apa pun.\nconst D = $('Olah Sheet Pengingat').first().json;\nconst T = D.tabel;\n\nconst konfig = Object.fromEntries(T.Konfigurasi.map((r) => [String(r.kunci).trim(), String(r.nilai ?? '').trim()]));\nconst tanggal = konfig.TANGGAL_SIMULASI;\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(tanggal || '')) {\n  throw new Error('TANGGAL_SIMULASI di sheet Konfigurasi harus berformat YYYY-MM-DD.');\n}\n\nconst requests = [];\nconst ditandai = [];\nfor (const p of T.Prospek.filter((r) => String(r.id_prospek || '').trim())) {\n  const tgl = String(p.tgl_tindak_lanjut || '').trim();\n  let label = '';\n  if (tgl && tgl < tanggal) label = 'Terlewat';\n  else if (tgl && tgl === tanggal) label = 'Jatuh tempo hari ini';\n\n  if (label) ditandai.push({ id_prospek: p.id_prospek, nama_perusahaan: p.nama_perusahaan, ae: p.ae, tgl_tindak_lanjut: tgl, pengingat: label });\n  if (String(p.pengingat || '').trim() !== label) requests.push(...ubahSel(D, 'Prospek', p, { pengingat: label }));\n}\n\nreturn [\n  {\n    json: {\n      tanggal_simulasi: tanggal,\n      ditandai,\n      sel_berubah: requests.length,\n      body_tulis: { requests },\n    },\n  },\n];\n"
-      },
-      "id": "26e7be18-d83b-5f3e-a088-4bf5b2e4c789",
-      "name": "Tandai Pengingat",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        660,
-        320
-      ],
-      "notes": "Terlewat / Jatuh tempo hari ini terhadap TANGGAL_SIMULASI; hanya sel yang berubah.",
+      "notes": "Terlewat / Jatuh tempo hari ini terhadap TANGGAL_SIMULASI; hanya sel yang berubah. Langkah: Olah Sheet Pengingat > Tandai Pengingat.",
       "onError": "continueErrorOutput"
     },
     {
@@ -137,7 +122,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        880,
+        660,
         320
       ],
       "notes": "Tanpa perubahan: tidak menulis."
@@ -160,7 +145,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1100,
+        880,
         200
       ],
       "notes": "SATU batchUpdate atomik untuk kolom pengingat.",
@@ -196,7 +181,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1320,
+        1100,
         320
       ],
       "notes": "Hanya pemicu webhook yang butuh respons HTTP."
@@ -204,7 +189,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ status: 'ok', tanggal_simulasi: $('Tandai Pengingat').first().json.tanggal_simulasi, ditandai: $('Tandai Pengingat').first().json.ditandai, sel_berubah: $('Tandai Pengingat').first().json.sel_berubah }) }}",
+        "responseBody": "={{ JSON.stringify({ status: 'ok', tanggal_simulasi: $('Proses Pengingat').first().json.tanggal_simulasi, ditandai: $('Proses Pengingat').first().json.ditandai, sel_berubah: $('Proses Pengingat').first().json.sel_berubah }) }}",
         "options": {
           "responseCode": 200
         }
@@ -214,60 +199,24 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1540,
+        1320,
         320
       ],
       "notes": "Daftar prospek yang ditandai."
     },
     {
       "parameters": {
-        "jsCode": "// Node \"Siapkan Log Error\" pada jalur gagal (WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.\n// WORKFLOW dan NODE_MASUKAN (node validasi masukan) diisi saat dirakit.\nconst WORKFLOW = \"WF-04 Pengingat harian\";\nconst NODE_MASUKAN = \"Terima Jalankan\";\n\nlet masukan = {};\ntry {\n  masukan = $(NODE_MASUKAN).first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: WORKFLOW,\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n"
+        "jsCode": "// NODE GABUNGAN (dirakit oleh scripts/build_workflows.py). Setiap langkah = satu file di n8n/code/.\n// Rujukan $('Nama Node') ditulis eksplisit agar task runner n8n mengirim data node tersebut.\nconst __nyata = { \"Jadwal 08.00\": () => $('Jadwal 08.00'), \"Jalankan Manual\": () => $('Jalankan Manual'), \"Terima Jalankan\": () => $('Terima Jalankan'), \"Baca Sheet Pengingat\": () => $('Baca Sheet Pengingat'), \"Proses Pengingat\": () => $('Proses Pengingat'), \"Ada Perubahan?\": () => $('Ada Perubahan?'), \"Tulis Pengingat\": () => $('Tulis Pengingat'), \"Dari Webhook?\": () => $('Dari Webhook?'), \"Kirim Hasil Pengingat\": () => $('Kirim Hasil Pengingat'), \"Tulis Log Error\": () => $('Tulis Log Error'), \"Gagal Dari Webhook?\": () => $('Gagal Dari Webhook?'), \"Kirim Respons Gagal\": () => $('Kirim Respons Gagal') };\nconst __asli = (n) => (n in __nyata ? __nyata[n]() : $(n));\nconst __peta = {\"Olah Sheet Pengingat\": \"Proses Pengingat\", \"Tandai Pengingat\": \"Proses Pengingat\"};\nconst __lokal = [\"Siapkan Log Error\", \"Data Log\", \"Susun Baris Log\"];\nconst __hasil = {};\nconst __tidakJalan = (n) => ({ isExecuted: false, first: () => { throw new Error('Langkah ' + n + ' tidak dijalankan.'); }, all: () => [] });\nfunction __ref(n) {\n  if (n in __hasil) return { isExecuted: true, first: () => __hasil[n][0], all: () => __hasil[n] };\n  if (__lokal.includes(n)) return __tidakJalan(n);\n  if (n in __peta) {\n    const nyata = __asli(__peta[n]);\n    if (!nyata.isExecuted) return __tidakJalan(n);\n    const j = (nyata.first().json.__langkah || {})[n];\n    if (j === undefined) return __tidakJalan(n);\n    return { isExecuted: true, first: () => ({ json: j }), all: () => [{ json: j }] };\n  }\n  return __asli(n);\n}\nconst __masuk = (items) => ({ first: () => items[0], all: () => items });\nfunction __jalan(nama, fn, items) {\n  try {\n    const out = fn(__ref, __masuk(items));\n    __hasil[nama] = out;\n    return out;\n  } catch (e) {\n    e.message = '[' + nama + '] ' + e.message;\n    throw e;\n  }\n}\nconst __selesai = (json) => [{\n  json: { ...json, __langkah: Object.fromEntries(Object.entries(__hasil).map(([k, v]) => [k, v[0] && v[0].json])) },\n}];\nlet __data = $input.all();\n\n// ===== langkah: Siapkan Log Error =====\n__data = __jalan(\"Siapkan Log Error\", function ($, $input) {\n// Node \"Siapkan Log Error\" pada jalur gagal (WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.\n// WORKFLOW dan NODE_MASUKAN (node validasi masukan) diisi saat dirakit.\nconst WORKFLOW = \"WF-04 Pengingat harian\";\nconst NODE_MASUKAN = \"Terima Jalankan\";\n\nlet masukan = {};\ntry {\n  masukan = $(NODE_MASUKAN).first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: WORKFLOW,\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n\n}, $input.all());\n\n// ===== langkah: Data Log =====\n__data = __jalan(\"Data Log\", function ($, $input) {\n// Langkah \"Data Log\" pada node Catat Gagal (WF-01 sampai WF-04, WF-90). Mode: Run Once for All Items.\n// Mengambil baris Log_Error dari data sheet yang SUDAH dibaca di awal workflow, untuk nomor id_error berikutnya,\n// sehingga jalur gagal tidak perlu membaca sheet lagi. Bila pembacaan awal itu sendiri yang gagal,\n// daftar kosong dipakai (id_error mulai dari E0001; batasan yang diketahui).\n// NODE_DATA diisi saat dirakit: langkah yang memuat {tabel, header} hasil \"Olah Data Sheet\".\nconst NODE_DATA = \"Olah Sheet Pengingat\";\n\nlet values = [];\ntry {\n  const D = $(NODE_DATA).first().json;\n  const kolom = D.header.Log_Error || [];\n  values = [kolom, ...(D.tabel.Log_Error || []).map((r) => kolom.map((k) => r[k] ?? ''))];\n} catch (e) {\n  values = [];\n}\nreturn [{ json: { values } }];\n\n}, __data);\n\n// ===== langkah: Susun Baris Log =====\n__data = __jalan(\"Susun Baris Log\", function ($, $input) {\n// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.\nconst KOLOM_MASUKAN_AMAN = [\n  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',\n];\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {};\n  for (const k of KOLOM_MASUKAN_AMAN) {\n    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);\n  }\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n\n}, __data);\n\nreturn __selesai(__data[0].json);\n"
       },
-      "id": "9be18f53-d65f-58d7-bca7-3e9be66c0eb4",
-      "name": "Siapkan Log Error",
+      "id": "918e0d22-9034-5151-b93d-6a5cd4f56a47",
+      "name": "Catat Gagal",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        880,
+        440,
         700
       ],
-      "notes": "Menerima error dari node mana pun di WF-04.",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
-        "options": {
-          "timeout": 30000
-        },
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleSheetsOAuth2Api"
-      },
-      "id": "62e9ef89-9d51-5c2b-89db-1545788be9d9",
-      "name": "Baca Log Error",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1100,
-        700
-      ],
-      "notes": "Nomor id_error berikutnya dan urutan kolom.",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.\nconst KOLOM_MASUKAN_AMAN = [\n  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',\n];\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {};\n  for (const k of KOLOM_MASUKAN_AMAN) {\n    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);\n  }\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
-      },
-      "id": "267d6ab6-5230-52f7-956a-825c0e00f00c",
-      "name": "Susun Baris Log",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1320,
-        700
-      ],
-      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "notes": "FR-16. Mencatat node asal error dan pesannya; kredensial disamarkan. Langkah: Siapkan Log Error > Data Log > Susun Baris Log.",
       "onError": "continueRegularOutput"
     },
     {
@@ -283,12 +232,12 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.body_append) }}"
       },
-      "id": "e0f405a9-938a-5fd5-b57e-141efb6bd113",
-      "name": "Catat Log Error",
+      "id": "73c541c6-ffe5-5649-9787-a51e8e3cc9a1",
+      "name": "Tulis Log Error",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
+        660,
         700
       ],
       "notes": "Menambah satu baris ke sheet Log_Error.",
@@ -324,7 +273,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1760,
+        880,
         700
       ],
       "notes": "Hanya pemicu webhook yang butuh respons HTTP."
@@ -342,7 +291,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1980,
+        1100,
         700
       ],
       "notes": "G5: kegagalan dilaporkan jujur."
@@ -386,39 +335,21 @@
       "main": [
         [
           {
-            "node": "Olah Sheet Pengingat",
+            "node": "Proses Pengingat",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Siapkan Log Error",
+            "node": "Catat Gagal",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Olah Sheet Pengingat": {
-      "main": [
-        [
-          {
-            "node": "Tandai Pengingat",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Siapkan Log Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tandai Pengingat": {
+    "Proses Pengingat": {
       "main": [
         [
           {
@@ -429,7 +360,7 @@
         ],
         [
           {
-            "node": "Siapkan Log Error",
+            "node": "Catat Gagal",
             "type": "main",
             "index": 0
           }
@@ -465,7 +396,7 @@
         ],
         [
           {
-            "node": "Siapkan Log Error",
+            "node": "Catat Gagal",
             "type": "main",
             "index": 0
           }
@@ -483,40 +414,18 @@
         ]
       ]
     },
-    "Siapkan Log Error": {
+    "Catat Gagal": {
       "main": [
         [
           {
-            "node": "Baca Log Error",
+            "node": "Tulis Log Error",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Baca Log Error": {
-      "main": [
-        [
-          {
-            "node": "Susun Baris Log",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Susun Baris Log": {
-      "main": [
-        [
-          {
-            "node": "Catat Log Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Catat Log Error": {
+    "Tulis Log Error": {
       "main": [
         [
           {

@@ -1,21 +1,12 @@
-// WF-01 node "Ambil Teks Model" dan "Ambil Teks Draf" (KA-01). Mode: Run Once for All Items.
-// Menyamakan bentuk respons Claude dan Ollama menjadi satu teks keluaran.
-// NODE_KONTEKS: node yang memuat model_ai ("Susun Prompt" atau "Susun Prompt Draf"), diisi saat dirakit.
-const ctx = $(/*@NODE_KONTEKS*/ null).first().json;
+// Langkah "Ambil Teks Model" dan "Ambil Teks Draf" / "Ambil Teks Penawaran". Mode: Run Once for All Items.
+// Mengambil teks jawaban dari respons Claude Messages API.
 const r = $input.first().json;
 
-let teks = '';
-let catatan = null;
+// Respons bisa diawali blok thinking; jawaban ada di blok bertipe text.
+const teks = (r.content || [])
+  .filter((b) => b.type === 'text')
+  .map((b) => b.text)
+  .join('');
+const catatan = r.stop_reason === 'refusal' || r.stop_reason === 'max_tokens' ? r.stop_reason : null;
 
-if (ctx.model_ai === 'claude') {
-  // Respons bisa diawali blok thinking; jawaban ada di blok bertipe text.
-  teks = (r.content || [])
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
-  if (r.stop_reason === 'refusal' || r.stop_reason === 'max_tokens') catatan = r.stop_reason;
-} else {
-  teks = (r.message && r.message.content) || '';
-}
-
-return [{ json: { keluaran_model: teks, catatan_model: catatan, model_ai: ctx.model_ai } }];
+return [{ json: { keluaran_model: teks, catatan_model: catatan, model_ai: 'claude' } }];

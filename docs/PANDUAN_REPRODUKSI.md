@@ -24,7 +24,7 @@ Ada dua jalur:
         │                        │
         ▼                        ▼
  Claude API (Haiku 5.5)    Google Sheets API (1 spreadsheet, 8 sheet)
- atau Ollama lokal         satu baca + satu batchUpdate atomik per permintaan
+                          satu baca + satu batchUpdate atomik per permintaan
 ```
 
 **Alur satu pertanyaan (WF-01), dalam satu kalimat per langkah:**
@@ -61,7 +61,6 @@ Ada dua jalur:
 | Git | 2.x | |
 | Akun Google | pribadi | Google Sheets + Google Cloud project |
 | API key Claude | console.anthropic.com | dengan saldo; model `claude-haiku-5-5` |
-| Ollama (opsional) | model `qwen2.5:3b` | cadangan lokal (`ollama pull qwen2.5:3b`) |
 
 ---
 
@@ -95,7 +94,6 @@ Buat spreadsheet `MSI Demo (SIMULASI)` berisi 8 tab dengan nama persis seperti f
 **3.5 Kredensial di n8n** (Create → Credential), nama persis:
 - `Claude API (demo)`, jenis **Anthropic**
 - `Google Sheets (demo)`, jenis **Google Sheets OAuth2 API** → Sign in with Google → "Google hasn't verified this app" → Continue
-- `Ollama lokal (demo)`, jenis **Ollama**, Base URL `http://host.docker.internal:11434` (opsional)
 
 **3.6 API key n8n**
 Settings → n8n API → Create an API key → tempel ke `N8N_API_KEY` di `.env` (jangan ke chat atau screenshot).
@@ -151,7 +149,7 @@ Urutan ini mengikuti commit di `git log --reverse`. Untuk melihat persis apa yan
 - Node HTTP Request dengan kredensial bawaan `anthropicApi` (otomatis menambah `x-api-key`), header `anthropic-version: 2026-10-21`.
 - Body: `model, max_tokens, system, messages, output_config: { effort: "low", format: { type: "json_schema", schema } }`. **Tanpa `temperature`** (Haiku 5.5 → 400).
 - Respons bisa diawali blok `thinking`; jawaban diambil dari blok `type: "text"`.
-- Ollama: `POST /api/chat` dengan `format: <skema>`, `stream: false`, `temperature 0.1`.
+- **Node gabungan:** beberapa file langkah yang berurutan dijalankan dalam satu Code node (WF-01 dari 33 menjadi 15 node). Rujukan `$('Nama Langkah')` di dalam file tetap berfungsi; kode gabungan menuliskan `$('Nama Node')` secara eksplisit karena task runner n8n hanya mengirim data node yang dirujuk tertulis.
 
 ### 4.6 Data dan anti-dobel (BL-10, BL-11, KA-05)
 - **Baca:** `spreadsheets.get?includeGridData=true&ranges=...&fields=sheets(properties(sheetId,title),data(rowData(values(formattedValue))))` → node "Olah Data Sheet" mengubahnya menjadi objek per kolom + `_baris` (nomor baris sheet).
@@ -210,7 +208,7 @@ Urutan ini mengikuti commit di `git log --reverse`. Untuk melihat persis apa yan
 - **"Apa yang terjadi kalau Google Sheets mati di tengah proses?"** Penulisan dilakukan sekali di akhir dan atomik; halaman menerima status gagal, Log_Error mencatat penyebabnya, dan coba ulang dengan id yang sama tidak membuat data dobel (T-19, T-20).
 - **"Bagaimana mencegah prospek dobel?"** `kunci_normal` (huruf kecil, tanpa tanda baca, tanpa "PT" dan "Simulasi") + pencarian per ID; Histori mencatat `duplikat_terdeteksi` (T-09, T-10).
 - **"Di mana API key disimpan?"** Hanya di credential store n8n; `.env` tidak di-commit; log menyamarkan pola kunci; repo dipindai di T-28.
-- **"Berapa biayanya?"** Sekitar 2.900 token masuk dan 150–200 token keluar per pertanyaan; dua panggilan per pertanyaan (jawaban + draf). Ollama tersedia untuk data yang tidak boleh keluar dari laptop.
+- **"Berapa biayanya?"** Sekitar 2.900 token masuk dan 150–200 token keluar per pertanyaan; dua panggilan per pertanyaan (jawaban + draf). Model lokal (Ollama) dicatat sebagai pengembangan lanjut untuk data yang tidak boleh keluar dari laptop.
 
 ## 7. Keterbatasan (jujur disampaikan)
 
