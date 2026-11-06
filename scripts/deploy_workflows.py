@@ -79,6 +79,8 @@ class N8n:
 
 def jenis_kredensial(node: dict, tersedia: dict[str, dict]) -> str | None:
     p = node.get("parameters", {})
+    if node["type"] == "n8n-nodes-base.webhook" and p.get("authentication") == "headerAuth":
+        return "httpHeaderAuth"
     if p.get("authentication") == "predefinedCredentialType":
         calon = [p.get("nodeCredentialType")]
     elif node["type"] == "n8n-nodes-base.googleSheets":
@@ -86,6 +88,9 @@ def jenis_kredensial(node: dict, tersedia: dict[str, dict]) -> str | None:
     else:
         return None
     return next((c for c in calon if c in tersedia), calon[0] if calon else None)
+
+
+NAMA_KRED_RESET = "Reset seed token (demo)"
 
 
 class Pemasang:
@@ -98,6 +103,21 @@ class Pemasang:
             for n in w.get("nodes", []):
                 for jenis, rujukan in (n.get("credentials") or {}).items():
                     self.per_jenis.setdefault(jenis, rujukan)
+
+    def pastikan_kredensial_reset(self, token: str) -> None:
+        """Token reset (header X-Reset-Token) disimpan di credential store n8n, tidak pernah di repo."""
+        res = self.api.panggil("GET", "/credentials?limit=100")
+        ada = next((c for c in res.get("data", []) if c.get("name") == NAMA_KRED_RESET), None)
+        if ada is None:
+            if not token:
+                print("  RESET_TOKEN kosong di .env; kredensial reset tidak dibuat.")
+                return
+            ada = self.api.panggil("POST", "/credentials", {
+                "name": NAMA_KRED_RESET, "type": "httpHeaderAuth",
+                "data": {"name": "X-Reset-Token", "value": token},
+            })
+            print(f'Kredensial "{NAMA_KRED_RESET}" dibuat di n8n.')
+        self.per_jenis["httpHeaderAuth"] = {"id": ada["id"], "name": NAMA_KRED_RESET}
 
     def ganti_rujukan(self, body: dict) -> dict:
         teks = json.dumps(body, ensure_ascii=False)
@@ -166,6 +186,8 @@ def main() -> None:
     # File yang dirujuk workflow lain dipasang lebih dulu.
     files.sort(key=lambda f: (bool(POLA_RUJUKAN.search(f.read_text(encoding="utf-8"))), f.name))
     pemasang = Pemasang(api)
+    if any(f.name.startswith("WF-90") for f in files):
+        pemasang.pastikan_kredensial_reset(env.get("RESET_TOKEN", ""))
     for f in files:
         pemasang.deploy(f)
 

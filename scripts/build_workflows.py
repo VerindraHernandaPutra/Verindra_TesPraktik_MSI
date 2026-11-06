@@ -7,7 +7,8 @@ Sumber:
 
 Keluaran:
   n8n/workflows/WF-01_agent_chat.json         siap dipasang dengan deploy_workflows.py
-  n8n/workflows/WF-05_penanganan_error.json   error workflow untuk WF-01 (Log_Error)
+  n8n/workflows/WF-05_penanganan_error.json   error workflow (Log_Error)
+  n8n/workflows/WF-90_reset_seed.json         utilitas uji: tulis ulang sheet dari seed/
 
 Rujukan antar-workflow ditulis sebagai "@WF:<nama workflow>"; deploy_workflows.py menggantinya dengan ID asli.
 
@@ -17,6 +18,7 @@ Kredensial TIDAK ditulis ke file; dipilih di n8n atau diwarisi saat deploy.
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 import sys
@@ -570,6 +572,54 @@ def bangun_wf03(env: dict[str, str]) -> dict:
     return workflow_dasar("WF-03 Keputusan dan status", n1 + n2, k1 + k2)
 
 
+# ---------- WF-90 (utilitas uji) ----------
+
+SHEET_SEED = ["KB", "Prospek", "Percakapan", "Antrean_Staf", "Draf", "Histori", "Konfigurasi", "Log_Error"]
+
+
+def baca_seed() -> dict[str, list[list[str]]]:
+    hasil = {}
+    for s in SHEET_SEED:
+        with open(ROOT / "seed" / f"{s}.csv", encoding="utf-8", newline="") as f:
+            hasil[s] = [baris for baris in csv.reader(f)]
+    return hasil
+
+
+def bangun_wf90(env: dict[str, str]) -> dict:
+    """POST /reset-seed (Header Auth X-Reset-Token): tulis ulang 8 sheet dari seed/ secara atomik."""
+    _AWALAN_ID[0] = "WF-90"
+    sid = env["GOOGLE_SHEET_ID"]
+    url_meta = SHEETS_API + sid + "?" + urllib.parse.urlencode({"fields": "sheets.properties(sheetId,title)"})
+    body_gagal = "={{ JSON.stringify({ status: 'gagal', pesan: 'Reset seed gagal; data tidak berubah.' }) }}"
+    nodes = [
+        node("Terima Reset", "n8n-nodes-base.webhook", 2.1, (0, 300),
+             {"httpMethod": "POST", "path": "reset-seed", "responseMode": "responseNode",
+              "authentication": "headerAuth", "options": {}},
+             "Utilitas uji (Section 13). Wajib header X-Reset-Token; token hanya di .env dan credential n8n.",
+             webhookId=node_id("webhook/reset-seed")),
+        http("Baca Daftar Sheet", (220, 300), "GET", url_meta, "sheetId setiap sheet.",
+             kredensial="googleSheetsOAuth2Api"),
+        code_node("Susun Reset", (440, 300), isi_penanda(teks("n8n/code/wf90/susun_reset.js"), {"SEED": baca_seed()}),
+                  "Isi seed/ ditanam saat build. Satu batchUpdate atomik untuk 8 sheet."),
+        http("Tulis Seed", (660, 300), "POST", SHEETS_API + sid + ":batchUpdate", "Menulis ulang semua sheet.",
+             kredensial="googleSheetsOAuth2Api", body_expr="={{ JSON.stringify($json.body_tulis) }}"),
+        respond("Kirim Hasil Reset", (880, 300), 200,
+                "={{ JSON.stringify({ status: 'ok', baris_data: $('Susun Reset').first().json.ringkasan }) }}",
+                "Jumlah baris data (tanpa header) per sheet."),
+        respond("Kirim Respons Gagal", (660, 500), 502, body_gagal, "Batch atomik: bila gagal, tidak ada yang berubah."),
+    ]
+    koneksi = [
+        ("Terima Reset", 0, "Baca Daftar Sheet"),
+        ("Baca Daftar Sheet", 0, "Susun Reset"),
+        ("Baca Daftar Sheet", 1, "Kirim Respons Gagal"),
+        ("Susun Reset", 0, "Tulis Seed"),
+        ("Susun Reset", 1, "Kirim Respons Gagal"),
+        ("Tulis Seed", 0, "Kirim Hasil Reset"),
+        ("Tulis Seed", 1, "Kirim Respons Gagal"),
+    ]
+    return workflow_dasar("WF-90 Reset seed", nodes, koneksi)
+
+
 # ---------- WF-05 ----------
 
 def bangun_wf05(env: dict[str, str]) -> dict:
@@ -594,6 +644,7 @@ def main() -> None:
         ("WF-02_data_panel.json", bangun_wf02),
         ("WF-03_keputusan_status.json", bangun_wf03),
         ("WF-05_penanganan_error.json", bangun_wf05),
+        ("WF-90_reset_seed.json", bangun_wf90),
     ):
         keluaran = ROOT / "n8n/workflows" / nama_file
         wf = pembangun(env)

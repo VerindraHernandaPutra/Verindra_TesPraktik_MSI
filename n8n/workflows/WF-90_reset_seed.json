@@ -1,0 +1,193 @@
+{
+  "name": "WF-90 Reset seed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "reset-seed",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "6f2e22a0-0a09-51f3-bfe8-a0e6bc5bf8b6",
+      "name": "Terima Reset",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "notes": "Utilitas uji (Section 13). Wajib header X-Reset-Token; token hanya di .env dan credential n8n.",
+      "webhookId": "22259d47-fba6-5a9d-9b3c-9df83fb3c354"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?fields=sheets.properties%28sheetId%2Ctitle%29",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "f8a61896-bf69-5048-8ec2-014d91e1c93a",
+      "name": "Baca Daftar Sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "notes": "sheetId setiap sheet.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-90 node \"Susun Reset\" (Section 13: uji dijalankan pada data seed bersih). Mode: Run Once for All Items.\n// Menulis ulang SEMUA sheet dari isi folder seed/ dalam satu batchUpdate atomik:\n// updateCells dengan range seluruh sheet membersihkan sel yang tidak tertutup data seed.\n// SEED diisi saat dirakit: { namaSheet: [[header...], [baris...], ...] }. Hanya untuk data uji SIMULASI.\nconst SEED = {\n  \"KB\": [\n    [\n      \"kode\",\n      \"isi\",\n      \"topik\",\n      \"tindakan\",\n      \"aktif\"\n    ],\n    [\n      \"KB01\",\n      \"Pendaftaran tes tidak berbiaya\",\n      \"Biaya pendaftaran\",\n      \"Jawab penuh\",\n      \"TRUE\"\n    ],\n    [\n      \"KB02\",\n      \"Jadwal wawancara dikoordinasikan setelah verifikasi\",\n      \"Jadwal wawancara\",\n      \"Jawab terbatas + eskalasi\",\n      \"TRUE\"\n    ],\n    [\n      \"KB03\",\n      \"Sponsorship opsional dan tidak menentukan hasil penilaian\",\n      \"Sponsorship\",\n      \"Jawab penuh\",\n      \"TRUE\"\n    ],\n    [\n      \"KB04\",\n      \"Tarif paket, kepastian penghargaan, dan jadwal spesifik belum tersedia; alihkan ke staf\",\n      \"Tarif, jaminan penghargaan, jadwal spesifik\",\n      \"Jawab terbatas + eskalasi\",\n      \"TRUE\"\n    ]\n  ],\n  \"Prospek\": [\n    [\n      \"id_prospek\",\n      \"nama_perusahaan\",\n      \"kunci_normal\",\n      \"sektor\",\n      \"ae\",\n      \"status\",\n      \"kebutuhan\",\n      \"status_kebutuhan\",\n      \"tgl_tindak_lanjut\",\n      \"pengingat\",\n      \"dibuat\",\n      \"diubah\"\n    ],\n    [\n      \"P01\",\n      \"PT Simulasi Surya Reka\",\n      \"surya reka\",\n      \"Manufaktur\",\n      \"AE A\",\n      \"Baru\",\n      \"Pelaporan ESG\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P02\",\n      \"PT Simulasi Laut Biru\",\n      \"laut biru\",\n      \"Logistik\",\n      \"AE B\",\n      \"Kualifikasi\",\n      \"Efisiensi energi\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P03\",\n      \"PT Simulasi Tani Makmur\",\n      \"tani makmur\",\n      \"Agribisnis\",\n      \"AE A\",\n      \"Follow-up\",\n      \"Pemetaan emisi\",\n      \"Belum terkonfirmasi\",\n      \"2026-11-05\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P04\",\n      \"PT Simulasi Bina Dana\",\n      \"bina dana\",\n      \"Keuangan\",\n      \"AE B\",\n      \"Penawaran draf\",\n      \"Pelatihan internal\",\n      \"Belum terkonfirmasi\",\n      \"2026-11-07\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P05\",\n      \"PT Simulasi Mitra Sehat\",\n      \"mitra sehat\",\n      \"Kesehatan\",\n      \"AE A\",\n      \"Baru\",\n      \"Tata kelola\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P06\",\n      \"PT Simulasi Digital Karya\",\n      \"digital karya\",\n      \"Teknologi\",\n      \"AE B\",\n      \"Kualifikasi\",\n      \"Literasi ESG\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P07\",\n      \"PT Simulasi Tirta Lestari\",\n      \"tirta lestari\",\n      \"Air bersih\",\n      \"AE A\",\n      \"Follow-up\",\n      \"Indikator kinerja\",\n      \"Belum terkonfirmasi\",\n      \"2026-11-06\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P08\",\n      \"PT Simulasi Daya Hijau\",\n      \"daya hijau\",\n      \"Energi\",\n      \"AE B\",\n      \"Baru\",\n      \"Pelaporan dampak\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P09\",\n      \"PT Simulasi Niaga Sentosa\",\n      \"niaga sentosa\",\n      \"Perdagangan\",\n      \"AE A\",\n      \"Kualifikasi\",\n      \"Database prospek\",\n      \"Belum terkonfirmasi\",\n      \"\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ],\n    [\n      \"P10\",\n      \"PT Simulasi Cipta Sarana\",\n      \"cipta sarana\",\n      \"Konstruksi\",\n      \"AE B\",\n      \"Follow-up\",\n      \"Manajemen risiko\",\n      \"Belum terkonfirmasi\",\n      \"2026-11-09\",\n      \"\",\n      \"2026-11-03T09:00:00+07:00\",\n      \"2026-11-03T09:00:00+07:00\"\n    ]\n  ],\n  \"Percakapan\": [\n    [\n      \"id_percakapan\",\n      \"id_permintaan\",\n      \"waktu\",\n      \"id_prospek\",\n      \"pertanyaan\",\n      \"topik\",\n      \"jawaban\",\n      \"rujukan_kb\",\n      \"eskalasi\",\n      \"lolos_pemeriksa\",\n      \"model_ai\"\n    ]\n  ],\n  \"Antrean_Staf\": [\n    [\n      \"id_tiket\",\n      \"id_percakapan\",\n      \"alasan\",\n      \"status\",\n      \"ditangani_oleh\",\n      \"waktu\"\n    ]\n  ],\n  \"Draf\": [\n    [\n      \"id_draf\",\n      \"id_prospek\",\n      \"id_percakapan\",\n      \"isi_draf\",\n      \"status\",\n      \"diputuskan_oleh\",\n      \"catatan\",\n      \"dibuat\",\n      \"diputuskan\"\n    ]\n  ],\n  \"Histori\": [\n    [\n      \"id_histori\",\n      \"waktu\",\n      \"id_prospek\",\n      \"aktor\",\n      \"jenis\",\n      \"nilai_lama\",\n      \"nilai_baru\",\n      \"catatan\"\n    ]\n  ],\n  \"Konfigurasi\": [\n    [\n      \"kunci\",\n      \"nilai\"\n    ],\n    [\n      \"TANGGAL_SIMULASI\",\n      \"2026-11-06\"\n    ],\n    [\n      \"MODE_GAGAL\",\n      \"FALSE\"\n    ],\n    [\n      \"MODEL_AI\",\n      \"claude\"\n    ]\n  ],\n  \"Log_Error\": [\n    [\n      \"id_error\",\n      \"waktu\",\n      \"workflow\",\n      \"node\",\n      \"pesan\",\n      \"data_masukan\"\n    ]\n  ]\n};\n\nconst res = $input.first().json;\nconst gid = Object.fromEntries((res.sheets || []).map((s) => [s.properties.title, s.properties.sheetId]));\nconst hilang = Object.keys(SEED).filter((s) => !(s in gid));\nif (hilang.length) throw new Error('Sheet tidak ditemukan: ' + hilang.join(', '));\n\nconst requests = Object.entries(SEED).map(([sheet, baris]) => ({\n  updateCells: {\n    range: { sheetId: gid[sheet] },\n    rows: baris.map((r) => ({ values: r.map((v) => ({ userEnteredValue: { stringValue: String(v) } })) })),\n    fields: 'userEnteredValue',\n  },\n}));\n\nreturn [\n  {\n    json: {\n      body_tulis: { requests },\n      ringkasan: Object.fromEntries(Object.entries(SEED).map(([s, b]) => [s, b.length - 1])),\n    },\n  },\n];\n"
+      },
+      "id": "8e55377e-908b-582c-a576-d0eb216dd57d",
+      "name": "Susun Reset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "notes": "Isi seed/ ditanam saat build. Satu batchUpdate atomik untuk 8 sheet.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU:batchUpdate",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_tulis) }}"
+      },
+      "id": "fcaf5361-00f2-5669-b5be-316c0c15c289",
+      "name": "Tulis Seed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "notes": "Menulis ulang semua sheet.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ok', baris_data: $('Susun Reset').first().json.ringkasan }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "8f9b94b3-0c64-5281-a701-11f56973bb53",
+      "name": "Kirim Hasil Reset",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        880,
+        300
+      ],
+      "notes": "Jumlah baris data (tanpa header) per sheet."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'gagal', pesan: 'Reset seed gagal; data tidak berubah.' }) }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "69311158-fab0-5407-89d1-29cbebae5388",
+      "name": "Kirim Respons Gagal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        500
+      ],
+      "notes": "Batch atomik: bila gagal, tidak ada yang berubah."
+    }
+  ],
+  "connections": {
+    "Terima Reset": {
+      "main": [
+        [
+          {
+            "node": "Baca Daftar Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Daftar Sheet": {
+      "main": [
+        [
+          {
+            "node": "Susun Reset",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Reset": {
+      "main": [
+        [
+          {
+            "node": "Tulis Seed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tulis Seed": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Reset",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "@WF:WF-05 Penanganan error"
+  },
+  "pinData": {},
+  "active": false
+}
