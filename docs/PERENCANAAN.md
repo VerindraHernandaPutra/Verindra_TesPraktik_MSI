@@ -592,7 +592,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-08 | Agent | T-01 dijalankan 3 kali | Rujukan dan status eskalasi sama di ketiga hasil | O | NFR-07 | Belum diuji |
 | T-09 | CRM | Pertanyaan dengan prospek “P03” dua kali, id\_permintaan berbeda | Prospek tetap 10; Histori mencatat duplikat\_terdeteksi | O | FR-08 | Lulus (6 Nov 2026): P03 dua kali, Prospek tetap 10, Histori H0001–H0002 duplikat_terdeteksi; coba ulang tidak menambah Histori |
 | T-10 | CRM | Prospek ditulis “PT. Simulasi Tani Makmur ” (variasi ejaan) | Dikenali sebagai P03; total tetap 10 | O | FR-08 | Lulus (6 Nov 2026): dikenali sebagai P03 (H0003), total tetap 10 |
-| T-11 | CRM | Prospek baru “PT Simulasi Contoh Baru” | P11 dibuat dengan status Baru dan kebutuhan Belum terkonfirmasi; Histori prospek\_baru | O | FR-08, FR-10 | Belum diuji |
+| T-11 | CRM | Prospek baru “PT Simulasi Contoh Baru” | P11 dibuat dengan status Baru dan kebutuhan Belum terkonfirmasi; Histori prospek\_baru | O | FR-08, FR-10 | Lulus (6 Nov 2026): P11 dibuat sekali (Baru, Belum terkonfirmasi, AE A), Histori H0005 prospek_baru; coba ulang tidak menambah baris. Data uji direset di BL-18 |
 | T-12 | CRM | AE A mengubah P01 dari Baru ke Kualifikasi | Status berubah; Histori mencatat aktor, status lama, dan status baru | O | FR-09 | Belum diuji |
 | T-13 | CRM | AE B mencoba mengubah status P01 milik AE A | Ditolak; data tidak berubah | O | FR-09, FR-15 | Belum diuji |
 | T-14 | CRM | Status baru “Menang” (di luar daftar) | Ditolak dengan pesan status tidak valid | O | FR-09 | Belum diuji |
