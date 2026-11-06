@@ -532,8 +532,8 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-13 | S2 | WF-03 setujui/tolak draf dan ubah status; tab Panel staf | CC | Draf hanya bisa Siap kirim (simulasi) setelah Disetujui; Histori tercatat | FR-09, FR-14 | Selesai |
 | BL-14 | S3 | WF-02 GET /panel dan tab Dashboard | CC | Ringkasan 3/3/3/1 dan per AE 5/5 sama dengan isi sheet | FR-12 | Selesai |
 | BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Selesai |
-| BL-22 | S3 | Endpoint POST /prospek/draf di WF-03, prompt draf penawaran, kolom catatan dan tombol Buat draf AI di tab Dashboard | CC | Draf dari catatan P03 muncul di panel staf berstatus Menunggu persetujuan; Histori mencatat draf\_dibuat | FR-23 | Belum |
-| BL-16 | S3 | Pemilih peran yang membatasi tampilan AE | CC | AE A hanya melihat 5 prospek miliknya | FR-15 | Belum |
+| BL-22 | S3 | Endpoint POST /prospek/draf di WF-03, prompt draf penawaran, kolom catatan dan tombol Buat draf AI di tab Dashboard | CC | Draf dari catatan P03 muncul di panel staf berstatus Menunggu persetujuan; Histori mencatat draf\_dibuat | FR-23 | Selesai |
+| BL-16 | S3 | Pemilih peran yang membatasi tampilan AE | CC | AE A hanya melihat 5 prospek miliknya | FR-15 | Selesai |
 | BL-17 | S3 | Tombol Ekspor CSV prospek dan histori | CC | Isi CSV sama dengan dashboard | FR-19 | Belum |
 | BL-18 | F3 | scripts/run\_tests.py yang menjalankan semua kasus uji Section 13 dan mencetak hasilnya | CC | Satu perintah menghasilkan tabel lulus/gagal yang disimpan sebagai bukti | NFR-01, NFR-04 | Belum |
 | BL-19 | F3 | Jalankan pertanyaan uji dengan MODEL\_AI = ollama dan catat perbedaannya | K | Hasil dan waktu respons tercatat di Section 13 | KA-01 | Belum |
@@ -605,13 +605,13 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-21 | Keandalan | Kirim ulang id\_permintaan yang sudah sukses | Hasil lama dikembalikan; tidak ada baris baru di sheet mana pun | O | FR-16, NFR-04 | Lulus (6 Nov 2026): hasil lama dikembalikan (berulang), tanpa memanggil model dan tanpa baris baru |
 | T-22 | Dashboard | GET /panel sebagai admin pada seed bersih | Baru 3, Kualifikasi 3, Follow-up 3, Penawaran draf 1; AE A 5, AE B 5 | O | FR-07, FR-12 | Lulus (6 Nov 2026, seed bersih): Baru 3, Kualifikasi 3, Follow-up 3, Penawaran draf 1; AE A 5, AE B 5 (API dan tab Dashboard) |
 | T-23 | Pengingat | Jalankan WF-04 dengan TANGGAL\_SIMULASI 2026-11-06 | P03 terlewat; P07 jatuh tempo hari ini; P04 dan P10 tidak ditandai | M | FR-11 | Lulus (6 Nov 2026, dijalankan lewat POST /pengingat): P03 Terlewat, P07 Jatuh tempo hari ini, P04 dan P10 tidak ditandai; dijalankan ulang 0 sel berubah |
-| T-24 | Akses | GET /panel sebagai ae\_a | Hanya 5 prospek milik AE A | O | FR-15 | Lulus (6 Nov 2026, seed bersih) lewat API: ae_a hanya P01, P03, P05, P07, P09. Pemilih peran di halaman menyusul BL-16 |
+| T-24 | Akses | GET /panel sebagai ae\_a | Hanya 5 prospek milik AE A | O | FR-15 | Lulus (6 Nov 2026, seed bersih): ae_a hanya P01, P03, P05, P07, P09 (API dan pemilih peran Dashboard); ae_b hanya 5 prospek AE B |
 | T-25 | Bukti | Ekspor CSV dari dashboard | Isi CSV sama dengan sheet Prospek dan Histori | M | FR-19 | Belum diuji |
 | T-26 | Kinerja | Waktu respons T-01 dengan Claude, rata-rata 3 kali | 10 detik atau kurang | O | NFR-06 | Belum diuji |
 | T-27 | Model | T-01 sampai T-06 dengan MODEL\_AI = ollama | Hasil lulus/gagal dan waktu respons tercatat; perbedaan dengan Claude dijelaskan | O | KA-01 | Belum diuji |
 | T-28 | Keamanan | Cari pola API key di repo dan periksa setiap screenshot | Tidak ada kredensial ditemukan | M | NFR-02 | Belum diuji |
 | T-29 | KB | Ubah isi KB03 di sheet, ajukan T-01, lalu kembalikan | Jawaban mengikuti isi KB yang baru tanpa mengubah workflow | M | FR-18 | Belum diuji |
-| T-30 | Draf | AE A menambah catatan pada P03 (“Perlu mengonfirmasi apakah perusahaan ingin informasi program awards”), lalu menekan Buat draf AI | Draf penawaran berstatus Menunggu persetujuan dan tampil di panel staf; tidak menjanjikan harga atau penghargaan; kebutuhan tetap Belum terkonfirmasi; Histori tercatat | O | FR-23 | Belum diuji |
+| T-30 | Draf | AE A menambah catatan pada P03 (“Perlu mengonfirmasi apakah perusahaan ingin informasi program awards”), lalu menekan Buat draf AI | Draf penawaran berstatus Menunggu persetujuan dan tampil di panel staf; tidak menjanjikan harga atau penghargaan; kebutuhan tetap Belum terkonfirmasi; Histori tercatat | O | FR-23 | Lulus (6 Nov 2026): AE A + catatan P03 menghasilkan D0002 Menunggu persetujuan di panel staf; tanpa harga/janji; kebutuhan tetap Belum terkonfirmasi; Histori draf_dibuat |
 
 ### Matriks keterlacakan
 

@@ -457,7 +457,8 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         code_node("Ambil Teks Draf", (3960, ya), isi_penanda(ambil, {"NODE_KONTEKS": "Susun Prompt Draf"}),
                   "Menyamakan respons Claude dan Ollama untuk draf."),
         code_node("Periksa Draf", (4180, ya),
-                  gabung("n8n/code/pemeriksa_jawaban.js", "n8n/code/wf01/periksa_draf.js"),
+                  isi_penanda(gabung("n8n/code/pemeriksa_jawaban.js", "n8n/code/periksa_draf.js"),
+                              {"NODE_KB": "Susun Prompt"}),
                   "PJ-01–PJ-04 untuk draf; pelanggaran diganti template aman dan dicatat."),
         code_node("Cek Mode Gagal", (4400, y), teks("n8n/code/wf01/cek_mode_gagal.js"),
                   "FR-17. MODE_GAGAL = TRUE memicu error buatan tepat sebelum langkah tulis (T-19)."),
@@ -569,7 +570,92 @@ def bangun_wf03(env: dict[str, str]) -> dict:
         catatan_proses="FR-09. AE hanya prospek miliknya; Histori ubah_status (aktor, status lama, status baru).",
         tulis=True,
     )
-    return workflow_dasar("WF-03 Keputusan dan status", n1 + n2, k1 + k2)
+    n3, k3 = rantai_draf_penawaran(env, y=1900)
+    return workflow_dasar("WF-03 Keputusan dan status", n1 + n2 + n3, k1 + k2 + k3)
+
+
+def rantai_draf_penawaran(env: dict[str, str], y: int) -> tuple[list[dict], list[tuple[str, int, str]]]:
+    """POST /prospek/draf (FR-23): catatan AE > draf penawaran AI > pemeriksa > Draf + Histori (atomik)."""
+    sid = env["GOOGLE_SHEET_ID"]
+    cfg = {"model_claude": env["CLAUDE_MODEL"], "model_ollama": env["OLLAMA_MODEL"]}
+    sheets = ["Konfigurasi", "KB", "Prospek", "Draf", "Histori"]
+    kode_susun = isi_penanda(
+        gabung("n8n/code/sheet_tulis.js", "n8n/code/wf03/susun_prompt_penawaran.js"),
+        {
+            "PROMPT_PENAWARAN": teks("n8n/prompts/draf_penawaran.md"),
+            "SKEMA_DRAF": json.loads(teks("n8n/prompts/skema_draf.json")),
+            "CFG": cfg,
+        },
+    )
+    log_nodes, log_koneksi = jalur_log(sid, 1100, y + 420, kode_siapkan_log("WF-03 Keputusan dan status", "Validasi Draf"),
+                                       "Menerima error dari node mana pun di rantai draf penawaran.", akhiran=" (Draf)")
+    gagal = "Siapkan Log Error (Draf)"
+    nodes = [
+        node("Terima Draf", "n8n-nodes-base.webhook", 2.1, (0, y),
+             {"httpMethod": "POST", "path": "prospek/draf", "responseMode": "responseNode",
+              "options": {"allowedOrigins": env["WEB_ORIGIN"]}},
+             "POST /prospek/draf (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+             webhookId=node_id("webhook/prospek/draf")),
+        code_node("Validasi Draf", (220, y), teks("n8n/code/wf03/validasi_draf.js"),
+                  "Catatan wajib; hanya AE atau admin."),
+        if_benar("Draf Valid?", (440, y), "={{ $json.valid }}", "Masukan tidak valid ditolak (400)."),
+        http("Baca Sheet Draf", (660, y), "GET", url_baca_sheet(sid, sheets),
+             f"Sheet {', '.join(sheets)} dalam SATU panggilan.", kredensial="googleSheetsOAuth2Api"),
+        code_node("Olah Sheet Draf", (880, y), kode_olah(sheets), "Baris sheet menjadi objek (+ nomor baris)."),
+        code_node("Susun Prompt Penawaran", (1100, y), kode_susun,
+                  "FR-23, AR-08. AE hanya prospek miliknya. Sumber: wf03/susun_prompt_penawaran.js + prompts/draf_penawaran.md"),
+        if_benar("Penawaran Boleh?", (1320, y), "={{ $json.boleh }}", "False: prospek tidak ada atau milik AE lain (400)."),
+        if_node("Pilih Model Penawaran", (1540, y), "={{ $json.model_ai }}", {"type": "string", "operation": "equals"},
+                "ollama", "KA-01."),
+        panggil_ollama("Panggil Ollama (Penawaran)", (1760, y - 120), env, "Draf penawaran lewat Ollama lokal."),
+        panggil_claude("Panggil Claude (Penawaran)", (1760, y + 60), "Draf penawaran lewat Claude. Kredensial: Claude API (demo)."),
+        code_node("Ambil Teks Penawaran", (1980, y),
+                  isi_penanda(teks("n8n/code/wf01/ambil_teks_model.js"), {"NODE_KONTEKS": "Susun Prompt Penawaran"}),
+                  "Menyamakan respons Claude dan Ollama."),
+        code_node("Periksa Draf", (2200, y),
+                  isi_penanda(gabung("n8n/code/pemeriksa_jawaban.js", "n8n/code/periksa_draf.js"),
+                              {"NODE_KB": "Susun Prompt Penawaran"}),
+                  "PJ-01–PJ-04 untuk draf; pelanggaran diganti template aman dan dicatat."),
+        code_node("Siapkan Draf Penawaran", (2420, y),
+                  gabung("n8n/code/sheet_tulis.js", "n8n/code/wf03/siapkan_draf_penawaran.js"),
+                  "Draf Menunggu persetujuan (id_percakapan kosong) + Histori draf_dibuat."),
+        http("Tulis Draf", (2640, y), "POST", SHEETS_API + sid + ":batchUpdate",
+             "SATU batchUpdate atomik: Draf + Histori.", kredensial="googleSheetsOAuth2Api",
+             body_expr="={{ JSON.stringify($json.body_tulis) }}"),
+        respond("Kirim Hasil Draf", (2860, y), 200,
+                "={{ JSON.stringify($('Siapkan Draf Penawaran').first().json.respons) }}", "Respons sesuai kontrak."),
+        respond("Kirim Penolakan Draf", (1540, y + 240), 400,
+                "={{ JSON.stringify({ status: 'ditolak', pesan: $json.pesan }) }}", "Ditolak karena aturan."),
+        respond("Kirim Respons Gagal Draf", (2200, y + 420), 502, BODY_GAGAL_UMUM, "G5: kegagalan dilaporkan jujur."),
+        *log_nodes,
+    ]
+    koneksi = [
+        ("Terima Draf", 0, "Validasi Draf"),
+        ("Validasi Draf", 0, "Draf Valid?"),
+        ("Draf Valid?", 0, "Baca Sheet Draf"),
+        ("Draf Valid?", 1, "Kirim Penolakan Draf"),
+        ("Baca Sheet Draf", 0, "Olah Sheet Draf"),
+        ("Olah Sheet Draf", 0, "Susun Prompt Penawaran"),
+        ("Susun Prompt Penawaran", 0, "Penawaran Boleh?"),
+        ("Penawaran Boleh?", 0, "Pilih Model Penawaran"),
+        ("Penawaran Boleh?", 1, "Kirim Penolakan Draf"),
+        ("Pilih Model Penawaran", 0, "Panggil Ollama (Penawaran)"),
+        ("Pilih Model Penawaran", 1, "Panggil Claude (Penawaran)"),
+        ("Panggil Ollama (Penawaran)", 0, "Ambil Teks Penawaran"),
+        ("Panggil Claude (Penawaran)", 0, "Ambil Teks Penawaran"),
+        ("Ambil Teks Penawaran", 0, "Periksa Draf"),
+        ("Periksa Draf", 0, "Siapkan Draf Penawaran"),
+        ("Siapkan Draf Penawaran", 0, "Tulis Draf"),
+        ("Tulis Draf", 0, "Kirim Hasil Draf"),
+        *[(n, 1, gagal) for n in (
+            "Validasi Draf", "Baca Sheet Draf", "Olah Sheet Draf", "Susun Prompt Penawaran",
+            "Panggil Ollama (Penawaran)", "Panggil Claude (Penawaran)", "Ambil Teks Penawaran", "Periksa Draf",
+            "Siapkan Draf Penawaran", "Tulis Draf",
+        )],
+        *log_koneksi,
+        ("Catat Log Error (Draf)", 0, "Kirim Respons Gagal Draf"),
+    ]
+    return nodes, koneksi
 
 
 # ---------- WF-04 ----------

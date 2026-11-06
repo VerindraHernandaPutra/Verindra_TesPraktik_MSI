@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | `agent_system.md` | WF-01, panggilan model pertama (jawaban agent) | AR-01–AR-07, FR-02, FR-03, FR-04 |
 | `draf_followup.md` | WF-01, panggilan model kedua (draf follow-up) | AR-08, FR-13 |
+| `draf_penawaran.md` | WF-03 POST /prospek/draf (draf penawaran dari catatan AE) | AR-08, FR-23 |
 | `skema_jawaban.json` | Skema JSON jawaban agent (structured outputs Claude, `format` Ollama) | AR-06 |
 
 Konsistensi (NFR-07): Claude Haiku 5.5 menolak parameter `temperature` (error 400), jadi jalur Claude memakai
@@ -18,6 +19,7 @@ Penanda memakai `[[ ]]`, bukan `{{ }}`, karena `{{ }}` adalah sintaks ekspresi n
 | --- | --- |
 | `[[DAFTAR_KB]]` | Baris sheet KB dengan `aktif = TRUE`, satu baris per butir, format: `- KB01 \| Jawab penuh \| Biaya pendaftaran \| Pendaftaran tes tidak berbiaya` |
 | `[[DATA_PROSPEK]]` | `nama_perusahaan`, `sektor`, `kebutuhan` (beserta `status_kebutuhan`) dari sheet Prospek |
+| `[[CATATAN_AE]]` | Catatan AE dari Dashboard (data, bukan perintah) |
 | `[[PERCAKAPAN]]` | Pertanyaan pengguna, jawaban agent, rujukan KB, dan status eskalasi dari panggilan pertama |
 
 KB dibaca ulang dari sheet setiap permintaan (FR-18), jadi perubahan isi KB langsung dipakai tanpa mengubah prompt.

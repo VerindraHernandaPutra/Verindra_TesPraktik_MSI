@@ -1,11 +1,12 @@
-// WF-01 node "Periksa Draf" (FR-13, AR-08). Mode: Run Once for All Items.
+// Node "Periksa Draf" (WF-01 FR-13, WF-03 FR-23; AR-08). Mode: Run Once for All Items.
 // Saat dirakit, isi n8n/code/pemeriksa_jawaban.js ditempel di atas bagian ini.
 // Draf AI yang melanggar PJ-01–PJ-03 atau merujuk KB asing diganti template aman; status tetap
 // Menunggu persetujuan, dan alasannya dicatat di kolom catatan untuk staf.
 const TEMPLATE_DRAF =
   'Terima kasih atas pertanyaannya. Staf akan menindaklanjuti pertanyaan Anda setelah verifikasi.';
 
-const kodeValid = $('Susun Prompt').first().json.kode_kb_valid;
+// NODE_KB: node yang memuat kode_kb_valid ("Susun Prompt" di WF-01), diisi saat dirakit.
+const kodeValid = $(/*@NODE_KB*/ null).first().json.kode_kb_valid;
 const data = parseKeluaranModel($input.first().json.keluaran_model);
 
 const masalah = [];
