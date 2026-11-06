@@ -1,0 +1,26 @@
+# Rahasia: jangan pernah di-commit (NFR-02, S-01)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node (uji unit pemeriksa jawaban)
+node_modules/
+
+# Data lokal n8n bila memakai bind mount
+.n8n/
+n8n_data/
+
+# Hasil uji dan bukti lokal
+bukti/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
