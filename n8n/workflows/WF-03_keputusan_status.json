@@ -18,7 +18,7 @@
         0,
         300
       ],
-      "notes": "POST /approve (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+      "notes": "POST /approve. Kontrak Section 10; hanya origin halaman web lokal yang diizinkan.",
       "webhookId": "5d97ddd9-1621-5c80-8b5e-5cd703af7f8d"
     },
     {
@@ -327,7 +327,7 @@
         0,
         1100
       ],
-      "notes": "POST /prospek/status (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+      "notes": "POST /prospek/status. Kontrak Section 10; hanya origin halaman web lokal yang diizinkan.",
       "webhookId": "fd3b3d1a-30d9-5cc5-b376-1bf1ed31b06e"
     },
     {

@@ -18,7 +18,7 @@
         0,
         300
       ],
-      "notes": "GET /panel (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+      "notes": "GET /panel. Kontrak Section 10; hanya origin halaman web lokal yang diizinkan.",
       "webhookId": "8aa112c8-4784-564f-b1ff-400360c990b3"
     },
     {

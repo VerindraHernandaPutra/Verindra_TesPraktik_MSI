@@ -115,6 +115,563 @@
         500
       ],
       "notes": "Batch atomik: bila gagal, tidak ada yang berubah."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "uji/konfigurasi",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "2954cfbf-84e2-5393-9448-5bfe895583bf",
+      "name": "Terima Konfigurasi Uji",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        900
+      ],
+      "notes": "POST /uji/konfigurasi. Utilitas uji: wajib header X-Reset-Token.",
+      "webhookId": "6ca16cdf-d536-5264-8879-1478b02d1bbb"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-90 node \"Validasi Konfigurasi Uji\" (POST /uji/konfigurasi, utilitas run_tests.py). Mode: Run Once for All Items.\n// Hanya tiga kunci yang boleh diubah, dengan nilai yang divalidasi ketat.\nconst body = $input.first().json.body || {};\nconst kunci = String(body.kunci ?? '').trim();\nconst nilai = String(body.nilai ?? '').trim();\nconst ATURAN = {\n  MODE_GAGAL: /^(TRUE|FALSE)$/,\n  MODEL_AI: /^(claude|ollama)$/,\n  TANGGAL_SIMULASI: /^\\d{4}-\\d{2}-\\d{2}$/,\n};\nconst valid = Object.prototype.hasOwnProperty.call(ATURAN, kunci) && ATURAN[kunci].test(nilai);\nreturn [\n  {\n    json: {\n      valid,\n      pesan: valid ? '' : 'Kunci atau nilai tidak diizinkan (MODE_GAGAL TRUE/FALSE, MODEL_AI claude/ollama, TANGGAL_SIMULASI YYYY-MM-DD).',\n      kunci,\n      nilai,\n    },\n  },\n];\n"
+      },
+      "id": "aed20fd5-d76c-5578-a374-b1c36269c358",
+      "name": "Validasi Konfigurasi Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        900
+      ],
+      "notes": "Validasi masukan dan peran.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "895a2311-6f32-5430-b29a-d42b3a13c7cd",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "09714ed0-8981-51fd-9b9a-8ea6f815d9d4",
+      "name": "Konfigurasi Uji Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        900
+      ],
+      "notes": "Masukan tidak valid ditolak (400)."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?includeGridData=true&ranges=Konfigurasi&fields=sheets%28properties%28sheetId%2Ctitle%29%2Cdata%28rowData%28values%28formattedValue%29%29%29%29",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "ea7e0b23-0699-5651-8ad9-4971616db8a4",
+      "name": "Baca Sheet Konfigurasi Uji",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        900
+      ],
+      "notes": "Sheet Konfigurasi dalam SATU panggilan spreadsheets.get.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Olah Data Sheet\" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:\n//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}\n//   header[sheet] = urutan kolom (dipakai saat menulis)\n//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)\n// SHEET_WAJIB diisi saat dirakit.\nconst SHEET_WAJIB = [\n  \"Konfigurasi\"\n];\n\nconst res = $input.first().json;\nconst tabel = {};\nconst header = {};\nconst gid = {};\n\nfor (const sh of res.sheets || []) {\n  const judul = sh.properties.title;\n  gid[judul] = sh.properties.sheetId;\n  const baris = ((sh.data && sh.data[0] && sh.data[0].rowData) || []).map((r) =>\n    (r.values || []).map((c) => (c && c.formattedValue != null ? String(c.formattedValue) : ''))\n  );\n  const kolom = (baris[0] || []).map((k) => k.trim());\n  header[judul] = kolom;\n  tabel[judul] = baris\n    .map((r, i) => ({ r, nomor: i + 1 }))\n    .slice(1)\n    .filter(({ r }) => r.some((v) => v.trim() !== ''))\n    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));\n}\n\nconst hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);\nif (hilang.length) throw new Error('Sheet tidak ditemukan atau tanpa header: ' + hilang.join(', '));\n\nreturn [{ json: { tabel, header, gid } }];\n"
+      },
+      "id": "bd8d8b6c-26e8-5afd-a82f-5c79487f7ca9",
+      "name": "Olah Sheet Konfigurasi Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        900
+      ],
+      "notes": "Baris sheet menjadi objek per kolom (+ nomor baris).",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun permintaan spreadsheets.batchUpdate (WF-01, WF-03).\n// Semua perubahan satu permintaan dikirim dalam satu batchUpdate, yang diterapkan Google secara atomik.\n// D = keluaran node \"Olah Data Sheet\" ({tabel, header, gid}). Baris module.exports hanya untuk uji unit.\n\nconst AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };\nconst STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];\nconst STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)'];\n\nfunction nomorBerikut(baris, kolom) {\n  return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n}\n\nfunction idBaru(awalan, nomor) {\n  return awalan + String(nomor).padStart(4, '0');\n}\n\nfunction sel(v) {\n  return typeof v === 'boolean'\n    ? { userEnteredValue: { boolValue: v } }\n    : { userEnteredValue: { stringValue: v == null ? '' : String(v) } };\n}\n\n// Menambah baris di akhir sheet; kolom mengikuti urutan header sheet itu sendiri.\nfunction tambahBaris(D, sheet, daftar) {\n  const kolom = D.header[sheet];\n  if (!kolom) throw new Error(`Sheet ${sheet} tidak dibaca.`);\n  for (const b of daftar) {\n    const asing = Object.keys(b).filter((k) => !kolom.includes(k));\n    if (asing.length) throw new Error(`Kolom ${asing.join(', ')} tidak ada di header sheet ${sheet}.`);\n  }\n  return {\n    appendCells: {\n      sheetId: D.gid[sheet],\n      rows: daftar.map((b) => ({ values: kolom.map((k) => sel(b[k])) })),\n      fields: 'userEnteredValue',\n    },\n  };\n}\n\n// Mengubah sel tertentu pada baris yang sudah ada (objek dari tabel, membawa _baris).\nfunction ubahSel(D, sheet, objek, perubahan) {\n  if (!objek || !objek._baris || objek._baris < 2) throw new Error(`Baris ${sheet} tidak valid untuk diubah.`);\n  return Object.entries(perubahan).map(([k, v]) => {\n    const c = D.header[sheet].indexOf(k);\n    if (c < 0) throw new Error(`Kolom ${k} tidak ada di header sheet ${sheet}.`);\n    return {\n      updateCells: {\n        range: {\n          sheetId: D.gid[sheet],\n          startRowIndex: objek._baris - 1,\n          endRowIndex: objek._baris,\n          startColumnIndex: c,\n          endColumnIndex: c + 1,\n        },\n        rows: [{ values: [sel(v)] }],\n        fields: 'userEnteredValue',\n      },\n    };\n  });\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };\n}\n\n// WF-90 node \"Proses Konfigurasi Uji\". Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/sheet_tulis.js ditempel di atas bagian ini (ubahSel).\nconst m = $('Validasi Konfigurasi Uji').first().json;\nconst D = $('Olah Sheet Konfigurasi Uji').first().json;\nconst baris = D.tabel.Konfigurasi.find((r) => String(r.kunci).trim() === m.kunci);\nif (!baris) return [{ json: { boleh: false, pesan: `Kunci ${m.kunci} tidak ada di sheet Konfigurasi.` } }];\n\nreturn [\n  {\n    json: {\n      boleh: true,\n      body_tulis: { requests: ubahSel(D, 'Konfigurasi', baris, { nilai: m.nilai }) },\n      respons: { status: 'ok', kunci: m.kunci, nilai_lama: baris.nilai, nilai: m.nilai },\n    },\n  },\n];\n"
+      },
+      "id": "76ec7a59-a0e4-5f0e-8342-a158643cc62d",
+      "name": "Proses Konfigurasi Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        900
+      ],
+      "notes": "run_tests.py: MODE_GAGAL (T-19/T-20), MODEL_AI (T-27), TANGGAL_SIMULASI.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ditolak', pesan: $json.pesan }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "290af730-a046-57c6-9c99-24ad553a70a2",
+      "name": "Kirim Penolakan Konfigurasi Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        1100
+      ],
+      "notes": "Ditolak karena aturan (bukan kegagalan sistem)."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'gagal', pesan: 'Layanan sedang bermasalah, permintaan tidak dapat diproses. Silakan coba ulang.' }) }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "1f69b816-985f-5ae3-8882-50a93fc29403",
+      "name": "Kirim Respons Gagal Konfigurasi Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        1280
+      ],
+      "notes": "G5: kegagalan dilaporkan jujur."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Siapkan Log Error\" pada jalur gagal (WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.\n// WORKFLOW dan NODE_MASUKAN (node validasi masukan) diisi saat dirakit.\nconst WORKFLOW = \"WF-90 Reset seed\";\nconst NODE_MASUKAN = \"Validasi Konfigurasi Uji\";\n\nlet masukan = {};\ntry {\n  masukan = $(NODE_MASUKAN).first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: WORKFLOW,\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n"
+      },
+      "id": "aa8ef83f-b92b-5b46-920e-1e90b2e0e31e",
+      "name": "Siapkan Log Error (Konfigurasi Uji)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        1280
+      ],
+      "notes": "Menerima error dari node mana pun di rantai ini.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "9c59dadc-e774-5a10-b1b9-e8b02688118b",
+      "name": "Baca Log Error (Konfigurasi Uji)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        1280
+      ],
+      "notes": "Nomor id_error berikutnya dan urutan kolom.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.\nconst KOLOM_MASUKAN_AMAN = [\n  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',\n];\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {};\n  for (const k of KOLOM_MASUKAN_AMAN) {\n    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);\n  }\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error (Konfigurasi Uji)\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
+      },
+      "id": "bf91927d-8d9a-5be9-ab33-b51785929594",
+      "name": "Susun Baris Log (Konfigurasi Uji)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1280
+      ],
+      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_append) }}"
+      },
+      "id": "53a35b19-7bcd-5fa3-80b7-e19fd8303126",
+      "name": "Catat Log Error (Konfigurasi Uji)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        1280
+      ],
+      "notes": "Menambah satu baris ke sheet Log_Error.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c259536-116b-5631-aaa5-c21c58c57b88",
+              "leftValue": "={{ $json.boleh }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b7fff5e2-bd21-59c5-9adb-499c14669ca2",
+      "name": "Konfigurasi Uji Boleh?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        900
+      ],
+      "notes": "False: aturan menolak (400)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU:batchUpdate",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_tulis) }}"
+      },
+      "id": "11ea7d37-4c9c-50f4-a3b0-06c497610d44",
+      "name": "Tulis Konfigurasi Uji",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        900
+      ],
+      "notes": "SATU spreadsheets.batchUpdate: ubah sel + tambah Histori, atomik.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Proses Konfigurasi Uji').first().json.respons) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f688aee4-7f93-51d6-abdc-b2f2a1d80477",
+      "name": "Kirim Hasil Konfigurasi Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1760,
+        900
+      ],
+      "notes": "Respons sukses sesuai kontrak."
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "uji/data",
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "f7547177-2182-5c1e-82bc-11034a2d5db5",
+      "name": "Terima Data Uji",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1700
+      ],
+      "notes": "GET /uji/data. Utilitas uji: wajib header X-Reset-Token.",
+      "webhookId": "f78ca9f6-d667-52a2-8cce-8bc0f5144738"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-90 node \"Validasi Data Uji\" dan \"Susun Data Uji\" (GET /uji/data, utilitas run_tests.py).\n// Mengembalikan isi semua sheet (data SIMULASI) agar uji bisa memeriksa baris yang tertulis.\n// BAGIAN diisi saat dirakit: \"validasi\" atau \"susun\".\nconst BAGIAN = \"validasi\";\nif (BAGIAN === 'validasi') return [{ json: { valid: true } }];\nreturn [{ json: { status: 'ok', tabel: $('Olah Sheet Data Uji').first().json.tabel } }];\n"
+      },
+      "id": "790486dd-1462-5e44-96a0-7bea48bd610c",
+      "name": "Validasi Data Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        1700
+      ],
+      "notes": "Validasi masukan dan peran.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fdd500ec-246f-5735-b6a8-e5d78df4dab7",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7fd1260d-b932-5d29-8c64-49dfdf31b2d9",
+      "name": "Data Uji Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        1700
+      ],
+      "notes": "Masukan tidak valid ditolak (400)."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU?includeGridData=true&ranges=KB&ranges=Prospek&ranges=Percakapan&ranges=Antrean_Staf&ranges=Draf&ranges=Histori&ranges=Konfigurasi&ranges=Log_Error&fields=sheets%28properties%28sheetId%2Ctitle%29%2Cdata%28rowData%28values%28formattedValue%29%29%29%29",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "625d2c93-d5d7-5d7b-95a7-9800af7cac3e",
+      "name": "Baca Sheet Data Uji",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        1700
+      ],
+      "notes": "Sheet KB, Prospek, Percakapan, Antrean_Staf, Draf, Histori, Konfigurasi, Log_Error dalam SATU panggilan spreadsheets.get.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Olah Data Sheet\" (dipakai WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Mengubah respons spreadsheets.get (beberapa sheet dalam satu panggilan) menjadi:\n//   tabel[sheet]  = daftar baris sebagai objek {kolom: nilai, _baris: nomor baris di sheet (1 = header)}\n//   header[sheet] = urutan kolom (dipakai saat menulis)\n//   gid[sheet]    = sheetId numerik (dipakai appendCells dan updateCells)\n// SHEET_WAJIB diisi saat dirakit.\nconst SHEET_WAJIB = [\n  \"KB\",\n  \"Prospek\",\n  \"Percakapan\",\n  \"Antrean_Staf\",\n  \"Draf\",\n  \"Histori\",\n  \"Konfigurasi\",\n  \"Log_Error\"\n];\n\nconst res = $input.first().json;\nconst tabel = {};\nconst header = {};\nconst gid = {};\n\nfor (const sh of res.sheets || []) {\n  const judul = sh.properties.title;\n  gid[judul] = sh.properties.sheetId;\n  const baris = ((sh.data && sh.data[0] && sh.data[0].rowData) || []).map((r) =>\n    (r.values || []).map((c) => (c && c.formattedValue != null ? String(c.formattedValue) : ''))\n  );\n  const kolom = (baris[0] || []).map((k) => k.trim());\n  header[judul] = kolom;\n  tabel[judul] = baris\n    .map((r, i) => ({ r, nomor: i + 1 }))\n    .slice(1)\n    .filter(({ r }) => r.some((v) => v.trim() !== ''))\n    .map(({ r, nomor }) => ({ ...Object.fromEntries(kolom.map((k, i) => [k, r[i] ?? ''])), _baris: nomor }));\n}\n\nconst hilang = SHEET_WAJIB.filter((s) => !(s in tabel) || header[s].length === 0);\nif (hilang.length) throw new Error('Sheet tidak ditemukan atau tanpa header: ' + hilang.join(', '));\n\nreturn [{ json: { tabel, header, gid } }];\n"
+      },
+      "id": "7e893b9b-9092-5445-b6b6-0ef5fcb6e1c8",
+      "name": "Olah Sheet Data Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1700
+      ],
+      "notes": "Baris sheet menjadi objek per kolom (+ nomor baris).",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// WF-90 node \"Validasi Data Uji\" dan \"Susun Data Uji\" (GET /uji/data, utilitas run_tests.py).\n// Mengembalikan isi semua sheet (data SIMULASI) agar uji bisa memeriksa baris yang tertulis.\n// BAGIAN diisi saat dirakit: \"validasi\" atau \"susun\".\nconst BAGIAN = \"susun\";\nif (BAGIAN === 'validasi') return [{ json: { valid: true } }];\nreturn [{ json: { status: 'ok', tabel: $('Olah Sheet Data Uji').first().json.tabel } }];\n"
+      },
+      "id": "da6d6f44-7b38-5375-b034-d99757970e0f",
+      "name": "Susun Data Uji",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        1700
+      ],
+      "notes": "run_tests.py: isi semua sheet untuk memeriksa baris yang tertulis.",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ditolak', pesan: $json.pesan }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "1355e5a9-2f74-53c9-9e24-7ef2fd63aaea",
+      "name": "Kirim Penolakan Data Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        1900
+      ],
+      "notes": "Ditolak karena aturan (bukan kegagalan sistem)."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'gagal', pesan: 'Layanan sedang bermasalah, permintaan tidak dapat diproses. Silakan coba ulang.' }) }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "e15a80c3-7c3d-54a4-b9d7-ba87f516ca89",
+      "name": "Kirim Respons Gagal Data Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1540,
+        2080
+      ],
+      "notes": "G5: kegagalan dilaporkan jujur."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node \"Siapkan Log Error\" pada jalur gagal (WF-01, WF-02, WF-03). Mode: Run Once for All Items.\n// Menerima keluaran error dari node mana pun; mencatat node asal ($prevNode) dan pesannya.\n// WORKFLOW dan NODE_MASUKAN (node validasi masukan) diisi saat dirakit.\nconst WORKFLOW = \"WF-90 Reset seed\";\nconst NODE_MASUKAN = \"Validasi Data Uji\";\n\nlet masukan = {};\ntry {\n  masukan = $(NODE_MASUKAN).first().json;\n} catch (e) {\n  masukan = {};\n}\n\nconst item = $input.first().json || {};\nreturn [\n  {\n    json: {\n      workflow: WORKFLOW,\n      node: $prevNode.name,\n      error: item.error !== undefined ? item.error : item,\n      masukan,\n    },\n  },\n];\n"
+      },
+      "id": "77bf7aa1-9d25-543d-8149-732030be37ad",
+      "name": "Siapkan Log Error (Data Uji)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        2080
+      ],
+      "notes": "Menerima error dari node mana pun di rantai ini.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A%3AF",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api"
+      },
+      "id": "6b35c772-99f4-5af0-b3ce-66449ccb4aef",
+      "name": "Baca Log Error (Data Uji)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        2080
+      ],
+      "notes": "Nomor id_error berikutnya dan urutan kolom.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Penyusun baris Log_Error (FR-16, Section 9). Dipakai WF-01 (jalur gagal) dan WF-05.\n// Aturan Section 9: data_masukan tidak boleh berisi kredensial. Baris module.exports hanya untuk uji unit.\n\nconst KOLOM_LOG = ['id_error', 'waktu', 'workflow', 'node', 'pesan', 'data_masukan'];\nconst BATAS_PESAN = 500;\nconst BATAS_DATA = 500;\n\n// Menyamarkan pola yang menyerupai kredensial.\nfunction bersihkan(teks) {\n  return String(teks == null ? '' : teks)\n    .replace(/sk-ant-[A-Za-z0-9_\\-]+/g, '[DISAMARKAN]')\n    .replace(/\\b(Bearer|Basic)\\s+[A-Za-z0-9._~+\\/=\\-]+/gi, '$1 [DISAMARKAN]')\n    .replace(/(\"?(x-api-key|api[_-]?key|authorization|access_token|refresh_token|client_secret|password|token)\"?\\s*[:=]\\s*)(\"[^\"]*\"|[^\\s,}]+)/gi, '$1\"[DISAMARKAN]\"')\n    .replace(/ya29\\.[A-Za-z0-9._\\-]+/g, '[DISAMARKAN]');\n}\n\nfunction potong(teks, batas) {\n  const t = String(teks);\n  return t.length > batas ? t.slice(0, batas - 1) + '…' : t;\n}\n\n// Mengambil pesan yang bisa dibaca dari berbagai bentuk error n8n.\nfunction pesanError(e) {\n  if (e == null) return 'Kesalahan tidak diketahui.';\n  if (typeof e === 'string') return e;\n  const bagian = [e.message, e.description].filter((x) => x && typeof x === 'string');\n  return bagian.length ? bagian.join(' — ') : JSON.stringify(e);\n}\n\n// Hanya kolom masukan yang aman dan berguna (daftar putih); teks bebas dipotong.\nconst KOLOM_MASUKAN_AMAN = [\n  'id_permintaan', 'prospek', 'pertanyaan', 'id_draf', 'keputusan', 'id_prospek', 'status_baru', 'oleh', 'peran', 'catatan',\n];\nfunction dataMasukanAman(masukan) {\n  const m = masukan || {};\n  const aman = {};\n  for (const k of KOLOM_MASUKAN_AMAN) {\n    if (m[k] !== undefined && m[k] !== '') aman[k] = potong(String(m[k]), 200);\n  }\n  return potong(bersihkan(JSON.stringify(aman)), BATAS_DATA);\n}\n\n// baris: daftar baris Log_Error yang sudah ada (tanpa header), untuk nomor berikutnya.\nfunction susunBarisLog({ barisLama, waktu, workflow, node, error, masukan }) {\n  const nomor =\n    Math.max(0, ...(barisLama || []).map((r) => parseInt(String((r && r[0]) || '').replace(/\\D/g, ''), 10) || 0)) + 1;\n  return {\n    id_error: 'E' + String(nomor).padStart(4, '0'),\n    waktu,\n    workflow: workflow || '',\n    node: node || '',\n    pesan: potong(bersihkan(pesanError(error)), BATAS_PESAN),\n    data_masukan: dataMasukanAman(masukan),\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { KOLOM_LOG, bersihkan, pesanError, dataMasukanAman, susunBarisLog };\n}\n\n// Node \"Susun Baris Log\" (WF-01 jalur gagal dan WF-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/log_error.js ditempel di atas bagian ini.\n// Masukan: respons values.get Log_Error (atau item error bila pembacaan gagal).\n// NODE_SUMBER diisi saat dirakit: node yang menyiapkan {workflow, node, error, masukan}.\nconst sumber = $(\"Siapkan Log Error (Data Uji)\").first().json;\nconst res = $input.first().json || {};\nconst nilai = Array.isArray(res.values) ? res.values : [];\n\nconst header = (nilai[0] || []).map((k) => String(k).trim());\nconst kolom = KOLOM_LOG.every((k) => header.includes(k)) ? header : KOLOM_LOG;\n\nconst baris = susunBarisLog({\n  barisLama: nilai.slice(1),\n  waktu: $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true }),\n  workflow: sumber.workflow,\n  node: sumber.node,\n  error: sumber.error,\n  masukan: sumber.masukan,\n});\n\nreturn [{ json: { baris_log: baris, body_append: { values: [kolom.map((k) => (k in baris ? baris[k] : ''))] } } }];\n"
+      },
+      "id": "69fda6c4-c692-53d5-90b1-a9195ce3062f",
+      "name": "Susun Baris Log (Data Uji)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        2080
+      ],
+      "notes": "Section 9: data_masukan tanpa kredensial (pola kunci disamarkan). Sumber: n8n/code/log_error.js",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU/values/Log_Error%21A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+        "options": {
+          "timeout": 30000
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body_append) }}"
+      },
+      "id": "6b280488-6824-5c76-aa3a-b5d0af7280d4",
+      "name": "Catat Log Error (Data Uji)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        2080
+      ],
+      "notes": "Menambah satu baris ke sheet Log_Error.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "cbdc1891-0193-5915-8712-2ac0c3a6f080",
+      "name": "Kirim Hasil Data Uji",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1320,
+        1700
+      ],
+      "notes": "Respons sesuai kontrak."
     }
   ],
   "connections": {
@@ -177,6 +734,332 @@
         [
           {
             "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terima Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Validasi Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Konfigurasi Uji Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfigurasi Uji Valid?": {
+      "main": [
+        [
+          {
+            "node": "Baca Sheet Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Penolakan Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Sheet Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Olah Sheet Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Olah Sheet Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Proses Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proses Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Konfigurasi Uji Boleh?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Log Error (Konfigurasi Uji)": {
+      "main": [
+        [
+          {
+            "node": "Baca Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Log Error (Konfigurasi Uji)": {
+      "main": [
+        [
+          {
+            "node": "Susun Baris Log (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Baris Log (Konfigurasi Uji)": {
+      "main": [
+        [
+          {
+            "node": "Catat Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catat Log Error (Konfigurasi Uji)": {
+      "main": [
+        [
+          {
+            "node": "Kirim Respons Gagal Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfigurasi Uji Boleh?": {
+      "main": [
+        [
+          {
+            "node": "Tulis Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Penolakan Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tulis Konfigurasi Uji": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Konfigurasi Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Konfigurasi Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terima Data Uji": {
+      "main": [
+        [
+          {
+            "node": "Validasi Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validasi Data Uji": {
+      "main": [
+        [
+          {
+            "node": "Data Uji Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Uji Valid?": {
+      "main": [
+        [
+          {
+            "node": "Baca Sheet Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Penolakan Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Sheet Data Uji": {
+      "main": [
+        [
+          {
+            "node": "Olah Sheet Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Olah Sheet Data Uji": {
+      "main": [
+        [
+          {
+            "node": "Susun Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Data Uji": {
+      "main": [
+        [
+          {
+            "node": "Kirim Hasil Data Uji",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Siapkan Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Log Error (Data Uji)": {
+      "main": [
+        [
+          {
+            "node": "Baca Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Log Error (Data Uji)": {
+      "main": [
+        [
+          {
+            "node": "Susun Baris Log (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Susun Baris Log (Data Uji)": {
+      "main": [
+        [
+          {
+            "node": "Catat Log Error (Data Uji)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catat Log Error (Data Uji)": {
+      "main": [
+        [
+          {
+            "node": "Kirim Respons Gagal Data Uji",
             "type": "main",
             "index": 0
           }

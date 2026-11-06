@@ -53,7 +53,13 @@ scripts/    Script Python: uji otomatis dan reset seed
    ```
    Buka **http://localhost:8000** (bukan `127.0.0.1:8000` dan bukan membuka file langsung: webhook hanya
    mengizinkan origin `WEB_ORIGIN` di `.env`). Alamat n8n diatur di `web/config.js`.
-7. Jalankan uji otomatis — _belum diisi_
+7. **Jalankan uji otomatis.** Uji dimulai dengan reset seed (semua data demo ditulis ulang dari `seed/`):
+   ```
+   python scripts/run_tests.py          # minta konfirmasi RESET
+   python scripts/run_tests.py --ya --ollama   # tanpa konfirmasi, plus perbandingan Ollama (T-27)
+   ```
+   Hasil tersimpan di `bukti/hasil_uji_<waktu>.txt` dan `.json`. Uji unit tanpa n8n: `node --test "n8n/code/*.test.js"`.
+   Reset saja: `python scripts/reset_seed.py`.
 
 ## Keamanan
 

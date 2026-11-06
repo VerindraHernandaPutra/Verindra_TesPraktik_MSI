@@ -279,6 +279,7 @@ def rantai_endpoint(
     kode_proses: str,
     catatan_proses: str,
     tulis: bool,
+    header_auth: bool = False,
 ) -> tuple[list[dict], list[tuple[str, int, str]]]:
     """Rantai satu endpoint: Terima > Validasi > Valid? > Baca Sheet > Olah Sheet > Proses > [Boleh? > Tulis] > Kirim.
     Penolakan aturan bisnis -> 400 'ditolak'; error apa pun -> Log_Error -> 502 'gagal'."""
@@ -303,9 +304,12 @@ def rantai_endpoint(
 
     nodes = [
         node(n["terima"], "n8n-nodes-base.webhook", 2.1, (0, y),
+             {"httpMethod": metode, "path": path, "responseMode": "responseNode", "authentication": "headerAuth",
+              "options": {}} if header_auth else
              {"httpMethod": metode, "path": path, "responseMode": "responseNode",
               "options": {"allowedOrigins": env["WEB_ORIGIN"]}},
-             f"{metode} /{path} (kontrak Section 10). Hanya origin halaman web lokal yang diizinkan.",
+             f"{metode} /{path}. " + ("Utilitas uji: wajib header X-Reset-Token." if header_auth
+                                     else "Kontrak Section 10; hanya origin halaman web lokal yang diizinkan."),
              webhookId=node_id("webhook/" + path)),
         code_node(n["validasi"], (220, y), kode_validasi, "Validasi masukan dan peran."),
         if_benar(n["valid"], (440, y), "={{ $json.valid }}", "Masukan tidak valid ditolak (400)."),
@@ -740,7 +744,7 @@ def baca_seed() -> dict[str, list[list[str]]]:
 
 
 def bangun_wf90(env: dict[str, str]) -> dict:
-    """POST /reset-seed (Header Auth X-Reset-Token): tulis ulang 8 sheet dari seed/ secara atomik."""
+    """Utilitas uji (Header Auth X-Reset-Token): POST /reset-seed, POST /uji/konfigurasi, GET /uji/data."""
     _AWALAN_ID[0] = "WF-90"
     sid = env["GOOGLE_SHEET_ID"]
     url_meta = SHEETS_API + sid + "?" + urllib.parse.urlencode({"fields": "sheets.properties(sheetId,title)"})
@@ -771,7 +775,22 @@ def bangun_wf90(env: dict[str, str]) -> dict:
         ("Tulis Seed", 0, "Kirim Hasil Reset"),
         ("Tulis Seed", 1, "Kirim Respons Gagal"),
     ]
-    return workflow_dasar("WF-90 Reset seed", nodes, koneksi)
+    n2, k2 = rantai_endpoint(
+        env, y=900, akhiran="Konfigurasi Uji", workflow="WF-90 Reset seed", metode="POST", path="uji/konfigurasi",
+        kode_validasi=teks("n8n/code/wf90/validasi_konfigurasi.js"), sheets=["Konfigurasi"],
+        kode_proses=gabung("n8n/code/sheet_tulis.js", "n8n/code/wf90/proses_konfigurasi.js"),
+        catatan_proses="run_tests.py: MODE_GAGAL (T-19/T-20), MODEL_AI (T-27), TANGGAL_SIMULASI.",
+        tulis=True, header_auth=True,
+    )
+    kode_data = teks("n8n/code/wf90/data_uji.js")
+    n3, k3 = rantai_endpoint(
+        env, y=1700, akhiran="Data Uji", workflow="WF-90 Reset seed", metode="GET", path="uji/data",
+        kode_validasi=isi_penanda(kode_data, {"BAGIAN": "validasi"}), sheets=SHEET_SEED,
+        kode_proses=isi_penanda(kode_data, {"BAGIAN": "susun"}),
+        catatan_proses="run_tests.py: isi semua sheet untuk memeriksa baris yang tertulis.",
+        tulis=False, header_auth=True,
+    )
+    return workflow_dasar("WF-90 Reset seed", nodes + n2 + n3, koneksi + k2 + k3)
 
 
 # ---------- WF-05 ----------
