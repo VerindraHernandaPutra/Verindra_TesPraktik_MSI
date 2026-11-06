@@ -531,7 +531,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-12 | S2 | WF-05, cabang error di node Sheets, MODE\_GAGAL; pesan gagal + Coba ulang di UI | CC | Uji gagal: status gagal tampil, tidak ada baris sukses, coba ulang tidak menggandakan data | FR-16, FR-17 | Selesai |
 | BL-13 | S2 | WF-03 setujui/tolak draf dan ubah status; tab Panel staf | CC | Draf hanya bisa Siap kirim (simulasi) setelah Disetujui; Histori tercatat | FR-09, FR-14 | Selesai |
 | BL-14 | S3 | WF-02 GET /panel dan tab Dashboard | CC | Ringkasan 3/3/3/1 dan per AE 5/5 sama dengan isi sheet | FR-12 | Selesai |
-| BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Belum |
+| BL-15 | S3 | WF-04 pengingat harian berbasis TANGGAL\_SIMULASI | CC | P03 tertandai terlewat, P07 jatuh tempo hari ini | FR-11 | Selesai |
 | BL-22 | S3 | Endpoint POST /prospek/draf di WF-03, prompt draf penawaran, kolom catatan dan tombol Buat draf AI di tab Dashboard | CC | Draf dari catatan P03 muncul di panel staf berstatus Menunggu persetujuan; Histori mencatat draf\_dibuat | FR-23 | Belum |
 | BL-16 | S3 | Pemilih peran yang membatasi tampilan AE | CC | AE A hanya melihat 5 prospek miliknya | FR-15 | Belum |
 | BL-17 | S3 | Tombol Ekspor CSV prospek dan histori | CC | Isi CSV sama dengan dashboard | FR-19 | Belum |
@@ -604,7 +604,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-20 | Keandalan | MODE\_GAGAL = FALSE, coba ulang dengan id\_permintaan yang sama | Sukses; tepat satu baris Percakapan untuk id\_permintaan itu | O | FR-16 | Lulus (6 Nov 2026): coba ulang id yang sama sukses, Percakapan 6 menjadi 7 (tepat satu baris C0007) |
 | T-21 | Keandalan | Kirim ulang id\_permintaan yang sudah sukses | Hasil lama dikembalikan; tidak ada baris baru di sheet mana pun | O | FR-16, NFR-04 | Lulus (6 Nov 2026): hasil lama dikembalikan (berulang), tanpa memanggil model dan tanpa baris baru |
 | T-22 | Dashboard | GET /panel sebagai admin pada seed bersih | Baru 3, Kualifikasi 3, Follow-up 3, Penawaran draf 1; AE A 5, AE B 5 | O | FR-07, FR-12 | Lulus (6 Nov 2026, seed bersih): Baru 3, Kualifikasi 3, Follow-up 3, Penawaran draf 1; AE A 5, AE B 5 (API dan tab Dashboard) |
-| T-23 | Pengingat | Jalankan WF-04 dengan TANGGAL\_SIMULASI 2026-11-06 | P03 terlewat; P07 jatuh tempo hari ini; P04 dan P10 tidak ditandai | M | FR-11 | Belum diuji |
+| T-23 | Pengingat | Jalankan WF-04 dengan TANGGAL\_SIMULASI 2026-11-06 | P03 terlewat; P07 jatuh tempo hari ini; P04 dan P10 tidak ditandai | M | FR-11 | Lulus (6 Nov 2026, dijalankan lewat POST /pengingat): P03 Terlewat, P07 Jatuh tempo hari ini, P04 dan P10 tidak ditandai; dijalankan ulang 0 sel berubah |
 | T-24 | Akses | GET /panel sebagai ae\_a | Hanya 5 prospek milik AE A | O | FR-15 | Lulus (6 Nov 2026, seed bersih) lewat API: ae_a hanya P01, P03, P05, P07, P09. Pemilih peran di halaman menyusul BL-16 |
 | T-25 | Bukti | Ekspor CSV dari dashboard | Isi CSV sama dengan sheet Prospek dan Histori | M | FR-19 | Belum diuji |
 | T-26 | Kinerja | Waktu respons T-01 dengan Claude, rata-rata 3 kali | 10 detik atau kurang | O | NFR-06 | Belum diuji |

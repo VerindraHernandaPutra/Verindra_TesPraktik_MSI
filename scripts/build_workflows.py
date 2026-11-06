@@ -572,6 +572,74 @@ def bangun_wf03(env: dict[str, str]) -> dict:
     return workflow_dasar("WF-03 Keputusan dan status", n1 + n2, k1 + k2)
 
 
+# ---------- WF-04 ----------
+
+def bangun_wf04(env: dict[str, str]) -> dict:
+    """Pengingat harian (FR-11): Schedule 08.00 WIB, tombol manual n8n, dan POST /pengingat dari Dashboard."""
+    _AWALAN_ID[0] = "WF-04"
+    sid = env["GOOGLE_SHEET_ID"]
+    sheets = ["Konfigurasi", "Prospek"]
+    log_nodes, log_koneksi = jalur_log(
+        sid, 880, 700, kode_siapkan_log("WF-04 Pengingat harian", "Terima Jalankan"),
+        "Menerima error dari node mana pun di WF-04.",
+    )
+    dari_webhook = "={{ $('Terima Jalankan').isExecuted }}"
+    body_hasil = (
+        "={{ JSON.stringify({ status: 'ok', tanggal_simulasi: $('Tandai Pengingat').first().json.tanggal_simulasi, "
+        "ditandai: $('Tandai Pengingat').first().json.ditandai, "
+        "sel_berubah: $('Tandai Pengingat').first().json.sel_berubah }) }}"
+    )
+    nodes = [
+        node("Jadwal 08.00", "n8n-nodes-base.scheduleTrigger", 1.2, (0, 160),
+             {"rule": {"interval": [{"field": "days", "daysInterval": 1, "triggerAtHour": 8, "triggerAtMinute": 0}]}},
+             "FR-11. Setiap hari pukul 08.00 (zona waktu workflow Asia/Jakarta)."),
+        node("Jalankan Manual", "n8n-nodes-base.manualTrigger", 1, (0, 320), {},
+             "Tombol Execute workflow di n8n (T-23)."),
+        node("Terima Jalankan", "n8n-nodes-base.webhook", 2.1, (0, 480),
+             {"httpMethod": "POST", "path": "pengingat", "responseMode": "responseNode",
+              "options": {"allowedOrigins": env["WEB_ORIGIN"]}},
+             "POST /pengingat: tombol Jalankan pengingat di Dashboard. Idempoten; hanya menulis kolom pengingat.",
+             webhookId=node_id("webhook/pengingat")),
+        http("Baca Sheet Pengingat", (220, 320), "GET", url_baca_sheet(sid, sheets),
+             "Konfigurasi dan Prospek dalam SATU panggilan.", kredensial="googleSheetsOAuth2Api"),
+        code_node("Olah Sheet Pengingat", (440, 320), kode_olah(sheets), "Baris sheet menjadi objek (+ nomor baris)."),
+        code_node("Tandai Pengingat", (660, 320), gabung("n8n/code/sheet_tulis.js", "n8n/code/wf04/tandai_pengingat.js"),
+                  "Terlewat / Jatuh tempo hari ini terhadap TANGGAL_SIMULASI; hanya sel yang berubah."),
+        if_benar("Ada Perubahan?", (880, 320), "={{ $json.sel_berubah > 0 }}", "Tanpa perubahan: tidak menulis."),
+        http("Tulis Pengingat", (1100, 200), "POST", SHEETS_API + sid + ":batchUpdate",
+             "SATU batchUpdate atomik untuk kolom pengingat.", kredensial="googleSheetsOAuth2Api",
+             body_expr="={{ JSON.stringify($json.body_tulis) }}"),
+        if_benar("Dari Webhook?", (1320, 320), dari_webhook, "Hanya pemicu webhook yang butuh respons HTTP."),
+        respond("Kirim Hasil Pengingat", (1540, 320), 200, body_hasil, "Daftar prospek yang ditandai."),
+        *log_nodes,
+        if_benar("Gagal Dari Webhook?", (1760, 700), dari_webhook, "Hanya pemicu webhook yang butuh respons HTTP."),
+        respond("Kirim Respons Gagal", (1980, 700), 502, BODY_GAGAL_UMUM, "G5: kegagalan dilaporkan jujur."),
+    ]
+    gagal = "Siapkan Log Error"
+    koneksi = [
+        ("Jadwal 08.00", 0, "Baca Sheet Pengingat"),
+        ("Jalankan Manual", 0, "Baca Sheet Pengingat"),
+        ("Terima Jalankan", 0, "Baca Sheet Pengingat"),
+        ("Baca Sheet Pengingat", 0, "Olah Sheet Pengingat"),
+        ("Baca Sheet Pengingat", 1, gagal),
+        ("Olah Sheet Pengingat", 0, "Tandai Pengingat"),
+        ("Olah Sheet Pengingat", 1, gagal),
+        ("Tandai Pengingat", 0, "Ada Perubahan?"),
+        ("Tandai Pengingat", 1, gagal),
+        ("Ada Perubahan?", 0, "Tulis Pengingat"),
+        ("Ada Perubahan?", 1, "Dari Webhook?"),
+        ("Tulis Pengingat", 0, "Dari Webhook?"),
+        ("Tulis Pengingat", 1, gagal),
+        ("Dari Webhook?", 0, "Kirim Hasil Pengingat"),
+        *log_koneksi,
+        ("Catat Log Error", 0, "Gagal Dari Webhook?"),
+        ("Gagal Dari Webhook?", 0, "Kirim Respons Gagal"),
+    ]
+    wf = workflow_dasar("WF-04 Pengingat harian", nodes, koneksi)
+    wf["settings"]["timezone"] = "Asia/Jakarta"
+    return wf
+
+
 # ---------- WF-90 (utilitas uji) ----------
 
 SHEET_SEED = ["KB", "Prospek", "Percakapan", "Antrean_Staf", "Draf", "Histori", "Konfigurasi", "Log_Error"]
@@ -643,6 +711,7 @@ def main() -> None:
         ("WF-01_agent_chat.json", bangun_wf01),
         ("WF-02_data_panel.json", bangun_wf02),
         ("WF-03_keputusan_status.json", bangun_wf03),
+        ("WF-04_pengingat_harian.json", bangun_wf04),
         ("WF-05_penanganan_error.json", bangun_wf05),
         ("WF-90_reset_seed.json", bangun_wf90),
     ):
