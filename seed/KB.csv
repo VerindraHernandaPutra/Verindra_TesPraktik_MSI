@@ -1,0 +1,5 @@
+kode,isi,topik,tindakan,aktif
+KB01,Pendaftaran tes tidak berbiaya,Biaya pendaftaran,Jawab penuh,TRUE
+KB02,Jadwal wawancara dikoordinasikan setelah verifikasi,Jadwal wawancara,Jawab terbatas + eskalasi,TRUE
+KB03,Sponsorship opsional dan tidak menentukan hasil penilaian,Sponsorship,Jawab penuh,TRUE
+KB04,"Tarif paket, kepastian penghargaan, dan jadwal spesifik belum tersedia; alihkan ke staf","Tarif, jaminan penghargaan, jadwal spesifik",Jawab terbatas + eskalasi,TRUE
