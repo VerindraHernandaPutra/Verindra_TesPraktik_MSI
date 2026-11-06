@@ -8,6 +8,7 @@ const idPermintaan = String(body.id_permintaan ?? '').trim();
 
 const pesan = [];
 if (!pertanyaan) pesan.push('Pertanyaan tidak boleh kosong.');
+if (!prospek) pesan.push('Identitas prospek (ID P01–P10 atau nama perusahaan) wajib diisi.');
 
 return [
   {

@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// WF-01 node \"Validasi Masukan\" (FR-01). Mode: Run Once for All Items.\n// Membaca body POST /chat sesuai kontrak Section 10: id_permintaan, prospek, pertanyaan.\nconst body = $input.first().json.body || {};\n\nconst pertanyaan = String(body.pertanyaan ?? '').trim();\nconst prospek = String(body.prospek ?? '').trim();\nconst idPermintaan = String(body.id_permintaan ?? '').trim();\n\nconst pesan = [];\nif (!pertanyaan) pesan.push('Pertanyaan tidak boleh kosong.');\n\nreturn [\n  {\n    json: {\n      valid: pesan.length === 0,\n      pesan: pesan.join(' '),\n      id_permintaan: idPermintaan,\n      prospek,\n      pertanyaan,\n    },\n  },\n];\n"
+        "jsCode": "// WF-01 node \"Validasi Masukan\" (FR-01). Mode: Run Once for All Items.\n// Membaca body POST /chat sesuai kontrak Section 10: id_permintaan, prospek, pertanyaan.\nconst body = $input.first().json.body || {};\n\nconst pertanyaan = String(body.pertanyaan ?? '').trim();\nconst prospek = String(body.prospek ?? '').trim();\nconst idPermintaan = String(body.id_permintaan ?? '').trim();\n\nconst pesan = [];\nif (!pertanyaan) pesan.push('Pertanyaan tidak boleh kosong.');\nif (!prospek) pesan.push('Identitas prospek (ID P01–P10 atau nama perusahaan) wajib diisi.');\n\nreturn [\n  {\n    json: {\n      valid: pesan.length === 0,\n      pesan: pesan.join(' '),\n      id_permintaan: idPermintaan,\n      prospek,\n      pertanyaan,\n    },\n  },\n];\n"
       },
       "id": "80e77d91-6973-533a-8573-8ce0b36effd6",
       "name": "Validasi Masukan",
@@ -83,10 +83,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        660,
+        1980,
         520
       ],
-      "notes": "Masukan tidak valid."
+      "notes": "Masukan atau identitas prospek tidak valid."
     },
     {
       "parameters": {
@@ -112,6 +112,7 @@
       ],
       "notes": "Langkah 2. MODEL_AI, MODE_GAGAL, TANGGAL_SIMULASI.",
       "executeOnce": true,
+      "alwaysOutputData": true,
       "onError": "continueErrorOutput"
     },
     {
@@ -138,7 +139,111 @@
       ],
       "notes": "Langkah 2. FR-18: KB dibaca ulang setiap permintaan.",
       "executeOnce": true,
+      "alwaysOutputData": true,
       "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Prospek",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "60d9f8da-f198-5e6f-af8e-f7dfb26b7680",
+      "name": "Baca Prospek",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1100,
+        200
+      ],
+      "notes": "Langkah 2. Untuk mencari prospek (FR-08).",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Histori",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "f053a9e6-fcbb-5035-962a-74bef92e26f7",
+      "name": "Baca Histori",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1320,
+        200
+      ],
+      "notes": "Langkah 2. Nomor id_histori berikutnya dan cek coba ulang.",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SIMULASI MSI — Normalisasi nama perusahaan menjadi kunci_normal (FR-08, aturan anti-dobel Section 9).\n// Dipakai di WF-01 node \"Cari Prospek\". Baris module.exports di akhir hanya untuk uji unit.\n//\n// Aturan: huruf kecil, hapus tanda baca, hapus kata \"pt\" dan \"simulasi\", rapikan spasi.\n// Contoh: \"PT. Simulasi Tani Makmur \" -> \"tani makmur\".\n\nconst KATA_DIBUANG = ['pt', 'simulasi'];\n\nfunction normalisasiKunci(nama) {\n  return String(nama || '')\n    .toLowerCase()\n    .replace(/[^\\p{L}\\p{N}\\s]/gu, ' ')\n    .split(/\\s+/)\n    .filter((kata) => kata && !KATA_DIBUANG.includes(kata))\n    .join(' ');\n}\n\n// \"p3\", \"P03\", \"p003\" -> \"P03\"; selain pola ID mengembalikan null.\nfunction normalisasiIdProspek(teks) {\n  const m = String(teks || '').trim().match(/^p0*(\\d{1,4})$/i);\n  return m ? 'P' + m[1].padStart(2, '0') : null;\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { normalisasiKunci, normalisasiIdProspek };\n}\n\n// WF-01 node \"Cari Prospek\" (FR-08, aturan anti-dobel Section 9). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/normalisasi_kunci.js ditempel di atas bagian ini.\n// Hanya MENCARI; penulisan ke sheet terjadi di langkah 5 setelah jawaban lolos pemeriksa.\nconst masukan = $('Validasi Masukan').first().json;\nconst identitas = masukan.prospek;\n\n// alwaysOutputData mengirim satu item kosong bila sheet hanya berisi header; abaikan.\nconst daftar = $('Baca Prospek')\n  .all()\n  .map((i) => i.json)\n  .filter((r) => String(r.id_prospek || '').trim() !== '');\n\nfunction tolak(pesan) {\n  return [{ json: { valid: false, pesan, identitas } }];\n}\n\nconst id = normalisasiIdProspek(identitas);\nif (id) {\n  const ada = daftar.find((r) => String(r.id_prospek).trim().toUpperCase() === id);\n  if (!ada) return tolak(`Prospek ${id} tidak ditemukan.`);\n  return [{ json: { valid: true, baru: false, identitas, prospek: ada } }];\n}\n\nconst kunci = normalisasiKunci(identitas);\nif (!kunci) return tolak('Nama perusahaan tidak valid.');\n\nconst ada = daftar.find((r) => String(r.kunci_normal || '').trim() === kunci);\nif (ada) return [{ json: { valid: true, baru: false, identitas, prospek: ada } }];\n\n// Prospek baru: ID berikutnya (P11, P12, ...) dan AE dengan prospek paling sedikit (seri: AE A).\nconst nomorMaks = Math.max(0, ...daftar.map((r) => parseInt(String(r.id_prospek).replace(/\\D/g, ''), 10) || 0));\nconst jumlah = { 'AE A': 0, 'AE B': 0 };\nfor (const r of daftar) if (r.ae in jumlah) jumlah[r.ae] += 1;\n\nreturn [\n  {\n    json: {\n      valid: true,\n      baru: true,\n      identitas,\n      prospek: {\n        id_prospek: 'P' + String(nomorMaks + 1).padStart(2, '0'),\n        nama_perusahaan: identitas.replace(/\\s+/g, ' ').trim(),\n        kunci_normal: kunci,\n        sektor: '',\n        ae: jumlah['AE B'] < jumlah['AE A'] ? 'AE B' : 'AE A',\n        status: 'Baru',\n        kebutuhan: '',\n        status_kebutuhan: 'Belum terkonfirmasi', // FR-10: kebutuhan baru selalu belum terkonfirmasi\n        tgl_tindak_lanjut: '',\n        pengingat: '',\n      },\n    },\n  },\n];\n"
+      },
+      "id": "b0c81f22-d41b-57b2-b557-38962926272f",
+      "name": "Cari Prospek",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        200
+      ],
+      "notes": "FR-08. Cari per id_prospek atau kunci_normal; belum menulis. Sumber: n8n/code/normalisasi_kunci.js + wf01/cari_prospek.js"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb32681c-740e-544a-950b-5d479852fffc",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e4e3cbd9-40fe-595e-a2e3-70cccb60813f",
+      "name": "Prospek Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        200
+      ],
+      "notes": "ID yang tidak ada atau nama kosong ditolak sebelum memanggil model (hemat biaya)."
     },
     {
       "parameters": {
@@ -149,7 +254,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
+        1980,
         200
       ],
       "notes": "Langkah 3. FR-02, FR-03. Sumber: n8n/code/wf01/susun_prompt.js + n8n/prompts/"
@@ -183,7 +288,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1320,
+        2200,
         200
       ],
       "notes": "KA-01. MODEL_AI = ollama ke Ollama lokal, selain itu ke Claude."
@@ -204,7 +309,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
+        2420,
         60
       ],
       "notes": "Langkah 3 (cadangan). Ollama lokal, tanpa kredensial.",
@@ -237,7 +342,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
+        2420,
         300
       ],
       "notes": "Langkah 3. Kredensial: Claude API (demo). Structured outputs menjamin format JSON (AR-06).",
@@ -252,29 +357,393 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
+        2640,
         200
       ],
       "notes": "Menyamakan respons Claude dan Ollama. Sumber: n8n/code/wf01/ambil_teks_model.js"
     },
     {
       "parameters": {
-        "jsCode": "// SIMULASI MSI — Pemeriksa jawaban agent (FR-05, aturan PJ-01–PJ-04 di Section 7).\n// Berjalan tanpa AI sehingga hasilnya pasti dan bisa diuji unit (node --test).\n//\n// Dipakai di n8n Code node WF-01: tempel seluruh isi file ini, lalu tambahkan pemanggil\n// di bawahnya (lihat BL-08). Baris module.exports di akhir hanya untuk uji unit.\n\nconst KODE_KB_BAWAAN = ['KB01', 'KB02', 'KB03', 'KB04'];\n\nconst TEMPLATE_ESKALASI =\n  'Mohon maaf, saya belum dapat menjawab pertanyaan ini dari acuan yang tersedia. ' +\n  'Pertanyaan Anda saya teruskan kepada staf.';\n\nconst TOPIK_VALID = ['biaya_pendaftaran', 'sponsorship', 'jaminan_penghargaan', 'tarif', 'jadwal', 'sapaan', 'lainnya'];\n\n// Pengecualian PJ-04 untuk sapaan (AR-04): hanya bila PERTANYAAN PENGGUNA sendiri berupa sapaan\n// pendek, dicek dengan pola tetap, sehingga label \"sapaan\" dari AI saja tidak cukup.\nconst POLA_SAPAAN =\n  /^(halo+|hal+o|hai+|hi+|hello|hey|pagi|siang|sore|malam|selamat\\s+(pagi|siang|sore|malam)|assalamu'?alaikum|permisi|terima\\s*kasih|makasih|thanks?|ok(e|ay)?|siapa\\s+(kamu|anda)|(kamu|anda)\\s+siapa)\\b/i;\nconst POLA_BUKAN_SAPAAN =\n  /\\b(apa|apakah|berapa|bagaimana|kapan|bisa|bisakah|dimana|di\\s+mana|harus|biaya|harga|tarif|paket|sponsor\\w*|jadwal|wawancara|bintang|penghargaan|daftar|pendaftaran)\\b/i;\n\nfunction pertanyaanSapaan(pertanyaan) {\n  const t = String(pertanyaan || '').trim().replace(/[!?.,\\s]+$/, '');\n  if (!t || t.split(/\\s+/).length > 6) return false;\n  if (!POLA_SAPAAN.test(t)) return false;\n  // Sisa kalimat setelah frasa identitas tidak boleh memuat pertanyaan atau kata topik.\n  const sisa = t.replace(/siapa\\s+(kamu|anda)|(kamu|anda)\\s+siapa/gi, '');\n  return !sisa.includes('?') && !POLA_BUKAN_SAPAAN.test(sisa);\n}\n\n// PJ-01: nominal uang\nconst POLA_UANG = [\n  /\\brp\\.?\\s*\\d/i,\n  /\\brp\\b/i,\n  /\\brupiah\\b/i,\n  /\\d[\\d.,]*\\s*(juta|ribu|miliar|milyar|triliun|jt|rb|k)\\b/i,\n  /\\b(juta|miliar|milyar|triliun)\\b/i,\n  /\\$\\s*\\d/,\n  /\\b(usd|idr)\\b/i,\n  /\\b(dolar|dollar)\\b/i,\n  /\\b\\d{1,3}(?:[.,]\\d{3})+\\b/, // 10.000 atau 1,500,000\n];\n\n// PJ-02: tanggal atau nama hari spesifik\nconst POLA_TANGGAL = [\n  /\\b(senin|selasa|rabu|kamis|jum'?at|sabtu|minggu)\\b/i,\n  /\\b(januari|februari|pebruari|maret|april|mei|juni|juli|agustus|september|oktober|november|nopember|desember)\\b/i,\n  /\\b(jan|feb|mar|apr|jun|jul|agu|agt|ags|sep|okt|nov|des)\\.?\\s+\\d{2,4}\\b/i,\n  /\\b\\d{1,2}\\s+(jan|feb|mar|apr|mei|jun|jul|agu|agt|ags|sep|okt|nov|des)\\b/i,\n  /\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b/, // 12/11/2026\n  /\\b\\d{4}-\\d{2}-\\d{2}\\b/, // 2026-11-12\n  /\\btanggal\\s+\\d{1,2}\\b/i,\n  /\\b(besok|lusa)\\b/i,\n];\n\n// PJ-03: kata janji (hanya melanggar bila anak kalimatnya tidak dinegasikan)\nconst POLA_JANJI = [\n  /\\b(di)?jamin(kan)?\\b/i,\n  /\\bmenjamin\\b/i,\n  /\\b(menjanjikan|berjanji|janjikan)\\b/i,\n  /\\bpasti\\s+(mendapat|memperoleh|menang|lolos|terpilih|meraih|dapat)/i,\n  /\\bbintang\\s*(5|lima)\\b/i,\n  /\\bakan\\s+(mendapat|memperoleh|meraih)(kan)?\\s+(penghargaan|bintang)/i,\n];\nconst POLA_NEGASI = /\\b(tidak|tak|bukan|belum|tanpa)\\b/i;\n\nfunction cariPola(teks, daftarPola) {\n  for (const pola of daftarPola) {\n    const m = teks.match(pola);\n    if (m) return m[0];\n  }\n  return null;\n}\n\n// Memeriksa satu teks terhadap PJ-01–PJ-03. Bisa dipakai juga untuk isi draf.\nfunction periksaTeks(teks) {\n  const pelanggaran = [];\n  const t = String(teks || '');\n\n  const uang = cariPola(t, POLA_UANG);\n  if (uang) pelanggaran.push({ aturan: 'PJ-01', detail: `memuat nominal uang: \"${uang}\"` });\n\n  const tanggal = cariPola(t, POLA_TANGGAL);\n  if (tanggal) pelanggaran.push({ aturan: 'PJ-02', detail: `memuat tanggal atau hari: \"${tanggal}\"` });\n\n  for (const anakKalimat of t.split(/[.!?;,\\n]+/)) {\n    const janji = cariPola(anakKalimat, POLA_JANJI);\n    if (janji && !POLA_NEGASI.test(anakKalimat)) {\n      pelanggaran.push({ aturan: 'PJ-03', detail: `memuat janji: \"${anakKalimat.trim()}\"` });\n      break;\n    }\n  }\n  return pelanggaran;\n}\n\n// Mengubah teks keluaran model menjadi objek. Mengembalikan null bila tidak bisa di-parse.\nfunction parseKeluaranModel(keluaran) {\n  if (keluaran && typeof keluaran === 'object') return keluaran;\n  if (typeof keluaran !== 'string') return null;\n  let s = keluaran.trim().replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');\n  const awal = s.indexOf('{');\n  const akhir = s.lastIndexOf('}');\n  if (awal === -1 || akhir <= awal) return null;\n  try {\n    return JSON.parse(s.slice(awal, akhir + 1));\n  } catch (e) {\n    return null;\n  }\n}\n\n// Fungsi utama. keluaranModel: teks atau objek JSON dari agent.\n// kodeKbValid: kode KB aktif dari sheet KB (default KB01–KB04).\n// pertanyaan: teks pertanyaan pengguna, dipakai untuk pengecualian sapaan pada PJ-04.\n// Mengembalikan { lolos_pemeriksa, pelanggaran, hasil } dengan hasil siap dipakai workflow.\nfunction periksaJawaban(keluaranModel, kodeKbValid, pertanyaan) {\n  const kodeValid = Array.isArray(kodeKbValid) && kodeKbValid.length ? kodeKbValid : KODE_KB_BAWAAN;\n  const data = parseKeluaranModel(keluaranModel);\n  const pelanggaran = [];\n\n  const strukturBenar =\n    data &&\n    typeof data.jawaban === 'string' &&\n    data.jawaban.trim() !== '' &&\n    typeof data.eskalasi === 'boolean' &&\n    Array.isArray(data.rujukan_kb);\n\n  if (!strukturBenar) {\n    pelanggaran.push({ aturan: 'FORMAT', detail: 'keluaran model bukan JSON sesuai format Section 7' });\n  } else {\n    pelanggaran.push(...periksaTeks(data.jawaban));\n\n    // PJ-04: rujukan\n    const rujukanAsing = data.rujukan_kb.filter((k) => !kodeValid.includes(k));\n    if (rujukanAsing.length) {\n      pelanggaran.push({ aturan: 'PJ-04', detail: `rujukan tidak ada di KB: ${rujukanAsing.join(', ')}` });\n    }\n    const sapaanSah =\n      Array.isArray(data.topik) &&\n      data.topik.length === 1 &&\n      data.topik[0] === 'sapaan' &&\n      pertanyaanSapaan(pertanyaan);\n    if (!data.eskalasi && data.rujukan_kb.length === 0 && !sapaanSah) {\n      pelanggaran.push({ aturan: 'PJ-04', detail: 'jawaban tanpa eskalasi tidak punya rujukan KB' });\n    }\n  }\n\n  const topik =\n    strukturBenar && Array.isArray(data.topik)\n      ? data.topik.filter((x) => TOPIK_VALID.includes(x))\n      : [];\n\n  if (pelanggaran.length === 0) {\n    return {\n      lolos_pemeriksa: true,\n      pelanggaran: [],\n      hasil: {\n        topik: topik.length ? topik : ['lainnya'],\n        jawaban: data.jawaban.trim(),\n        rujukan_kb: data.rujukan_kb,\n        eskalasi: data.eskalasi,\n        alasan_eskalasi: data.eskalasi ? data.alasan_eskalasi || 'Dieskalasi agent.' : null,\n      },\n    };\n  }\n\n  return {\n    lolos_pemeriksa: false,\n    pelanggaran,\n    hasil: {\n      topik: topik.length ? topik : ['lainnya'],\n      jawaban: TEMPLATE_ESKALASI,\n      rujukan_kb: [],\n      eskalasi: true,\n      alasan_eskalasi:\n        'Pemeriksa jawaban menolak keluaran agent (' + pelanggaran.map((p) => p.aturan).join(', ') + ').',\n    },\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { periksaJawaban, periksaTeks, parseKeluaranModel, pertanyaanSapaan, TEMPLATE_ESKALASI, KODE_KB_BAWAAN };\n}\n\n// WF-01 node \"Periksa Jawaban\" (FR-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/pemeriksa_jawaban.js ditempel di atas bagian ini.\nconst ctx = $('Susun Prompt').first().json;\nconst keluaran = $input.first().json;\n\nconst cek = periksaJawaban(keluaran.keluaran_model, ctx.kode_kb_valid, ctx.pertanyaan);\n\n// Pencarian prospek berdasarkan nama baru dibuat di BL-10; untuk sekarang hanya ID P01, P02, dst.\nconst idProspek = /^P\\d{2,}$/i.test(ctx.prospek) ? ctx.prospek.toUpperCase() : null;\n\nreturn [\n  {\n    json: {\n      // Kontrak POST /chat (Section 10)\n      status: 'ok',\n      jawaban: cek.hasil.jawaban,\n      rujukan_kb: cek.hasil.rujukan_kb,\n      eskalasi: cek.hasil.eskalasi,\n      id_prospek: idProspek,\n      id_draf: null,\n      // Data untuk langkah 5–8 (BL-10, BL-11); tidak dikirim ke halaman\n      id_permintaan: ctx.id_permintaan,\n      pertanyaan: ctx.pertanyaan,\n      topik: cek.hasil.topik,\n      alasan_eskalasi: cek.hasil.alasan_eskalasi,\n      lolos_pemeriksa: cek.lolos_pemeriksa,\n      pelanggaran: cek.pelanggaran,\n      model_ai: keluaran.model_ai,\n      catatan_model: keluaran.catatan_model,\n    },\n  },\n];\n"
+        "jsCode": "// SIMULASI MSI — Pemeriksa jawaban agent (FR-05, aturan PJ-01–PJ-04 di Section 7).\n// Berjalan tanpa AI sehingga hasilnya pasti dan bisa diuji unit (node --test).\n//\n// Dipakai di n8n Code node WF-01: tempel seluruh isi file ini, lalu tambahkan pemanggil\n// di bawahnya (lihat BL-08). Baris module.exports di akhir hanya untuk uji unit.\n\nconst KODE_KB_BAWAAN = ['KB01', 'KB02', 'KB03', 'KB04'];\n\nconst TEMPLATE_ESKALASI =\n  'Mohon maaf, saya belum dapat menjawab pertanyaan ini dari acuan yang tersedia. ' +\n  'Pertanyaan Anda saya teruskan kepada staf.';\n\nconst TOPIK_VALID = ['biaya_pendaftaran', 'sponsorship', 'jaminan_penghargaan', 'tarif', 'jadwal', 'sapaan', 'lainnya'];\n\n// Pengecualian PJ-04 untuk sapaan (AR-04): hanya bila PERTANYAAN PENGGUNA sendiri berupa sapaan\n// pendek, dicek dengan pola tetap, sehingga label \"sapaan\" dari AI saja tidak cukup.\nconst POLA_SAPAAN =\n  /^(halo+|hal+o|hai+|hi+|hello|hey|pagi|siang|sore|malam|selamat\\s+(pagi|siang|sore|malam)|assalamu'?alaikum|permisi|terima\\s*kasih|makasih|thanks?|ok(e|ay)?|siapa\\s+(kamu|anda)|(kamu|anda)\\s+siapa)\\b/i;\nconst POLA_BUKAN_SAPAAN =\n  /\\b(apa|apakah|berapa|bagaimana|kapan|bisa|bisakah|dimana|di\\s+mana|harus|biaya|harga|tarif|paket|sponsor\\w*|jadwal|wawancara|bintang|penghargaan|daftar|pendaftaran)\\b/i;\n\nfunction pertanyaanSapaan(pertanyaan) {\n  const t = String(pertanyaan || '').trim().replace(/[!?.,\\s]+$/, '');\n  if (!t || t.split(/\\s+/).length > 6) return false;\n  if (!POLA_SAPAAN.test(t)) return false;\n  // Sisa kalimat setelah frasa identitas tidak boleh memuat pertanyaan atau kata topik.\n  const sisa = t.replace(/siapa\\s+(kamu|anda)|(kamu|anda)\\s+siapa/gi, '');\n  return !sisa.includes('?') && !POLA_BUKAN_SAPAAN.test(sisa);\n}\n\n// PJ-01: nominal uang\nconst POLA_UANG = [\n  /\\brp\\.?\\s*\\d/i,\n  /\\brp\\b/i,\n  /\\brupiah\\b/i,\n  /\\d[\\d.,]*\\s*(juta|ribu|miliar|milyar|triliun|jt|rb|k)\\b/i,\n  /\\b(juta|miliar|milyar|triliun)\\b/i,\n  /\\$\\s*\\d/,\n  /\\b(usd|idr)\\b/i,\n  /\\b(dolar|dollar)\\b/i,\n  /\\b\\d{1,3}(?:[.,]\\d{3})+\\b/, // 10.000 atau 1,500,000\n];\n\n// PJ-02: tanggal atau nama hari spesifik\nconst POLA_TANGGAL = [\n  /\\b(senin|selasa|rabu|kamis|jum'?at|sabtu|minggu)\\b/i,\n  /\\b(januari|februari|pebruari|maret|april|mei|juni|juli|agustus|september|oktober|november|nopember|desember)\\b/i,\n  /\\b(jan|feb|mar|apr|jun|jul|agu|agt|ags|sep|okt|nov|des)\\.?\\s+\\d{2,4}\\b/i,\n  /\\b\\d{1,2}\\s+(jan|feb|mar|apr|mei|jun|jul|agu|agt|ags|sep|okt|nov|des)\\b/i,\n  /\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b/, // 12/11/2026\n  /\\b\\d{4}-\\d{2}-\\d{2}\\b/, // 2026-11-12\n  /\\btanggal\\s+\\d{1,2}\\b/i,\n  /\\b(besok|lusa)\\b/i,\n];\n\n// PJ-03: kata janji (hanya melanggar bila anak kalimatnya tidak dinegasikan)\nconst POLA_JANJI = [\n  /\\b(di)?jamin(kan)?\\b/i,\n  /\\bmenjamin\\b/i,\n  /\\b(menjanjikan|berjanji|janjikan)\\b/i,\n  /\\bpasti\\s+(mendapat|memperoleh|menang|lolos|terpilih|meraih|dapat)/i,\n  /\\bbintang\\s*(5|lima)\\b/i,\n  /\\bakan\\s+(mendapat|memperoleh|meraih)(kan)?\\s+(penghargaan|bintang)/i,\n];\nconst POLA_NEGASI = /\\b(tidak|tak|bukan|belum|tanpa)\\b/i;\n\nfunction cariPola(teks, daftarPola) {\n  for (const pola of daftarPola) {\n    const m = teks.match(pola);\n    if (m) return m[0];\n  }\n  return null;\n}\n\n// Memeriksa satu teks terhadap PJ-01–PJ-03. Bisa dipakai juga untuk isi draf.\nfunction periksaTeks(teks) {\n  const pelanggaran = [];\n  const t = String(teks || '');\n\n  const uang = cariPola(t, POLA_UANG);\n  if (uang) pelanggaran.push({ aturan: 'PJ-01', detail: `memuat nominal uang: \"${uang}\"` });\n\n  const tanggal = cariPola(t, POLA_TANGGAL);\n  if (tanggal) pelanggaran.push({ aturan: 'PJ-02', detail: `memuat tanggal atau hari: \"${tanggal}\"` });\n\n  for (const anakKalimat of t.split(/[.!?;,\\n]+/)) {\n    const janji = cariPola(anakKalimat, POLA_JANJI);\n    if (janji && !POLA_NEGASI.test(anakKalimat)) {\n      pelanggaran.push({ aturan: 'PJ-03', detail: `memuat janji: \"${anakKalimat.trim()}\"` });\n      break;\n    }\n  }\n  return pelanggaran;\n}\n\n// Mengubah teks keluaran model menjadi objek. Mengembalikan null bila tidak bisa di-parse.\nfunction parseKeluaranModel(keluaran) {\n  if (keluaran && typeof keluaran === 'object') return keluaran;\n  if (typeof keluaran !== 'string') return null;\n  let s = keluaran.trim().replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '');\n  const awal = s.indexOf('{');\n  const akhir = s.lastIndexOf('}');\n  if (awal === -1 || akhir <= awal) return null;\n  try {\n    return JSON.parse(s.slice(awal, akhir + 1));\n  } catch (e) {\n    return null;\n  }\n}\n\n// Fungsi utama. keluaranModel: teks atau objek JSON dari agent.\n// kodeKbValid: kode KB aktif dari sheet KB (default KB01–KB04).\n// pertanyaan: teks pertanyaan pengguna, dipakai untuk pengecualian sapaan pada PJ-04.\n// Mengembalikan { lolos_pemeriksa, pelanggaran, hasil } dengan hasil siap dipakai workflow.\nfunction periksaJawaban(keluaranModel, kodeKbValid, pertanyaan) {\n  const kodeValid = Array.isArray(kodeKbValid) && kodeKbValid.length ? kodeKbValid : KODE_KB_BAWAAN;\n  const data = parseKeluaranModel(keluaranModel);\n  const pelanggaran = [];\n\n  const strukturBenar =\n    data &&\n    typeof data.jawaban === 'string' &&\n    data.jawaban.trim() !== '' &&\n    typeof data.eskalasi === 'boolean' &&\n    Array.isArray(data.rujukan_kb);\n\n  if (!strukturBenar) {\n    pelanggaran.push({ aturan: 'FORMAT', detail: 'keluaran model bukan JSON sesuai format Section 7' });\n  } else {\n    pelanggaran.push(...periksaTeks(data.jawaban));\n\n    // PJ-04: rujukan\n    const rujukanAsing = data.rujukan_kb.filter((k) => !kodeValid.includes(k));\n    if (rujukanAsing.length) {\n      pelanggaran.push({ aturan: 'PJ-04', detail: `rujukan tidak ada di KB: ${rujukanAsing.join(', ')}` });\n    }\n    const sapaanSah =\n      Array.isArray(data.topik) &&\n      data.topik.length === 1 &&\n      data.topik[0] === 'sapaan' &&\n      pertanyaanSapaan(pertanyaan);\n    if (!data.eskalasi && data.rujukan_kb.length === 0 && !sapaanSah) {\n      pelanggaran.push({ aturan: 'PJ-04', detail: 'jawaban tanpa eskalasi tidak punya rujukan KB' });\n    }\n  }\n\n  const topik =\n    strukturBenar && Array.isArray(data.topik)\n      ? data.topik.filter((x) => TOPIK_VALID.includes(x))\n      : [];\n\n  if (pelanggaran.length === 0) {\n    return {\n      lolos_pemeriksa: true,\n      pelanggaran: [],\n      hasil: {\n        topik: topik.length ? topik : ['lainnya'],\n        jawaban: data.jawaban.trim(),\n        rujukan_kb: data.rujukan_kb,\n        eskalasi: data.eskalasi,\n        alasan_eskalasi: data.eskalasi ? data.alasan_eskalasi || 'Dieskalasi agent.' : null,\n      },\n    };\n  }\n\n  return {\n    lolos_pemeriksa: false,\n    pelanggaran,\n    hasil: {\n      topik: topik.length ? topik : ['lainnya'],\n      jawaban: TEMPLATE_ESKALASI,\n      rujukan_kb: [],\n      eskalasi: true,\n      alasan_eskalasi:\n        'Pemeriksa jawaban menolak keluaran agent (' + pelanggaran.map((p) => p.aturan).join(', ') + ').',\n    },\n  };\n}\n\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = { periksaJawaban, periksaTeks, parseKeluaranModel, pertanyaanSapaan, TEMPLATE_ESKALASI, KODE_KB_BAWAAN };\n}\n\n// WF-01 node \"Periksa Jawaban\" (FR-05). Mode: Run Once for All Items.\n// Saat dirakit, isi n8n/code/pemeriksa_jawaban.js ditempel di atas bagian ini.\nconst ctx = $('Susun Prompt').first().json;\nconst keluaran = $input.first().json;\n\nconst cek = periksaJawaban(keluaran.keluaran_model, ctx.kode_kb_valid, ctx.pertanyaan);\n\nreturn [\n  {\n    json: {\n      jawaban: cek.hasil.jawaban,\n      rujukan_kb: cek.hasil.rujukan_kb,\n      eskalasi: cek.hasil.eskalasi,\n      id_prospek: $('Cari Prospek').first().json.prospek.id_prospek,\n      // Data untuk langkah 5–8; respons halaman disusun di \"Siapkan Langkah 5\"\n      id_permintaan: ctx.id_permintaan,\n      pertanyaan: ctx.pertanyaan,\n      topik: cek.hasil.topik,\n      alasan_eskalasi: cek.hasil.alasan_eskalasi,\n      lolos_pemeriksa: cek.lolos_pemeriksa,\n      pelanggaran: cek.pelanggaran,\n      model_ai: keluaran.model_ai,\n      catatan_model: keluaran.catatan_model,\n    },\n  },\n];\n"
       },
       "id": "849d6843-5fa8-50db-b310-fbca7de23118",
       "name": "Periksa Jawaban",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1980,
+        2860,
         200
       ],
       "notes": "Langkah 4. FR-05, PJ-01–PJ-04. Sumber: n8n/code/pemeriksa_jawaban.js + wf01/periksa_jawaban.js"
     },
     {
       "parameters": {
+        "jsCode": "// WF-01 node \"Siapkan Langkah 5\" (FR-08, FR-10, NFR-05). Mode: Run Once for All Items.\n// Menyiapkan baris Prospek (bila baru) dan baris Histori, plus respons untuk halaman.\nconst cari = $('Cari Prospek').first().json;\nconst jawab = $('Periksa Jawaban').first().json;\nconst waktu = $now.setZone('Asia/Jakarta').startOf('second').toISO({ suppressMilliseconds: true });\n\nconst histori = $('Baca Histori')\n  .all()\n  .map((i) => i.json)\n  .filter((r) => String(r.id_histori || '').trim() !== '');\n\n// Coba ulang dengan id_permintaan yang sama tidak boleh menambah Histori dua kali (FR-16).\nconst tanda = jawab.id_permintaan ? `id_permintaan=${jawab.id_permintaan}` : '';\nconst sudahTercatat =\n  tanda !== '' &&\n  histori.some(\n    (r) => ['prospek_baru', 'duplikat_terdeteksi'].includes(r.jenis) && String(r.catatan || '').includes(tanda)\n  );\n\nconst nomorMaks = Math.max(0, ...histori.map((r) => parseInt(String(r.id_histori).replace(/\\D/g, ''), 10) || 0));\nconst p = cari.prospek;\n\nconst barisProspek = cari.baru ? { ...p, dibuat: waktu, diubah: waktu } : null;\n\nconst barisHistori = sudahTercatat\n  ? null\n  : {\n      id_histori: 'H' + String(nomorMaks + 1).padStart(4, '0'),\n      waktu,\n      id_prospek: p.id_prospek,\n      aktor: 'Agent WF-01',\n      jenis: cari.baru ? 'prospek_baru' : 'duplikat_terdeteksi',\n      nilai_lama: '',\n      nilai_baru: cari.baru ? p.nama_perusahaan : '',\n      catatan:\n        (cari.baru\n          ? 'Prospek baru tercatat dari halaman chat'\n          : `Prospek sudah ada, tidak ditambah; identitas masuk: \"${cari.identitas}\"`) + (tanda ? `; ${tanda}` : ''),\n    };\n\nreturn [\n  {\n    json: {\n      // Kontrak POST /chat (Section 10)\n      respons: {\n        status: 'ok',\n        jawaban: jawab.jawaban,\n        rujukan_kb: jawab.rujukan_kb,\n        eskalasi: jawab.eskalasi,\n        id_prospek: p.id_prospek,\n        id_draf: null,\n      },\n      prospek_baru: barisProspek !== null,\n      prospek: barisProspek,\n      tulis_histori: barisHistori !== null,\n      histori: barisHistori,\n    },\n  },\n];\n"
+      },
+      "id": "41d41dae-2b81-5946-96d2-c4a19129cd2d",
+      "name": "Siapkan Langkah 5",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        200
+      ],
+      "notes": "Langkah 5. Baris Prospek (bila baru) dan Histori; coba ulang tidak menggandakan Histori. Sumber: wf01/siapkan_langkah5.js"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad87c993-341c-5402-a5b5-823647997227",
+              "leftValue": "={{ $('Siapkan Langkah 5').first().json.prospek_baru }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b07c2c81-0cff-5b2e-aee8-d0048f4e6655",
+      "name": "Prospek Baru?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3300,
+        200
+      ],
+      "notes": "Prospek yang sudah ada tidak menambah baris (FR-08)."
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Prospek",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_prospek": "={{ $('Siapkan Langkah 5').first().json.prospek.id_prospek }}",
+            "nama_perusahaan": "={{ $('Siapkan Langkah 5').first().json.prospek.nama_perusahaan }}",
+            "kunci_normal": "={{ $('Siapkan Langkah 5').first().json.prospek.kunci_normal }}",
+            "sektor": "={{ $('Siapkan Langkah 5').first().json.prospek.sektor }}",
+            "ae": "={{ $('Siapkan Langkah 5').first().json.prospek.ae }}",
+            "status": "={{ $('Siapkan Langkah 5').first().json.prospek.status }}",
+            "kebutuhan": "={{ $('Siapkan Langkah 5').first().json.prospek.kebutuhan }}",
+            "status_kebutuhan": "={{ $('Siapkan Langkah 5').first().json.prospek.status_kebutuhan }}",
+            "tgl_tindak_lanjut": "={{ $('Siapkan Langkah 5').first().json.prospek.tgl_tindak_lanjut }}",
+            "pengingat": "={{ $('Siapkan Langkah 5').first().json.prospek.pengingat }}",
+            "dibuat": "={{ $('Siapkan Langkah 5').first().json.prospek.dibuat }}",
+            "diubah": "={{ $('Siapkan Langkah 5').first().json.prospek.diubah }}"
+          },
+          "matchingColumns": [
+            "kunci_normal"
+          ],
+          "schema": [
+            {
+              "id": "id_prospek",
+              "displayName": "id_prospek",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nama_perusahaan",
+              "displayName": "nama_perusahaan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kunci_normal",
+              "displayName": "kunci_normal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sektor",
+              "displayName": "sektor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ae",
+              "displayName": "ae",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kebutuhan",
+              "displayName": "kebutuhan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_kebutuhan",
+              "displayName": "status_kebutuhan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tgl_tindak_lanjut",
+              "displayName": "tgl_tindak_lanjut",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pengingat",
+              "displayName": "pengingat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dibuat",
+              "displayName": "dibuat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "diubah",
+              "displayName": "diubah",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "b8a173e8-6e92-52a7-8084-991bebdf5f4d",
+      "name": "Simpan Prospek",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3520,
+        60
+      ],
+      "notes": "Langkah 5. Upsert per kunci_normal: coba ulang tidak menambah baris (NFR-04).",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2580440f-27a4-5b04-a950-bcf493b76be9",
+              "leftValue": "={{ $('Siapkan Langkah 5').first().json.tulis_histori }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "61b7c1d7-ef4a-557e-8f60-41c55324d732",
+      "name": "Tulis Histori?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3740,
+        200
+      ],
+      "notes": "False bila Histori untuk id_permintaan ini sudah tercatat (coba ulang)."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1nPJoCAMSrj9qEVw0g9tG92hKQ6c_DJTiJR-FIB7mLbU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Histori",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_histori": "={{ $('Siapkan Langkah 5').first().json.histori.id_histori }}",
+            "waktu": "={{ $('Siapkan Langkah 5').first().json.histori.waktu }}",
+            "id_prospek": "={{ $('Siapkan Langkah 5').first().json.histori.id_prospek }}",
+            "aktor": "={{ $('Siapkan Langkah 5').first().json.histori.aktor }}",
+            "jenis": "={{ $('Siapkan Langkah 5').first().json.histori.jenis }}",
+            "nilai_lama": "={{ $('Siapkan Langkah 5').first().json.histori.nilai_lama }}",
+            "nilai_baru": "={{ $('Siapkan Langkah 5').first().json.histori.nilai_baru }}",
+            "catatan": "={{ $('Siapkan Langkah 5').first().json.histori.catatan }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_histori",
+              "displayName": "id_histori",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "waktu",
+              "displayName": "waktu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id_prospek",
+              "displayName": "id_prospek",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "aktor",
+              "displayName": "aktor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "jenis",
+              "displayName": "jenis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nilai_lama",
+              "displayName": "nilai_lama",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nilai_baru",
+              "displayName": "nilai_baru",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "catatan",
+              "displayName": "catatan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "3022651b-cdd4-5062-afa7-0b86e1122b83",
+      "name": "Simpan Histori",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3960,
+        60
+      ],
+      "notes": "Langkah 5. Histori hanya ditambah, tidak pernah diubah (NFR-05).",
+      "executeOnce": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ status: $json.status, jawaban: $json.jawaban, rujukan_kb: $json.rujukan_kb, eskalasi: $json.eskalasi, id_prospek: $json.id_prospek, id_draf: $json.id_draf }) }}",
+        "responseBody": "={{ JSON.stringify($('Siapkan Langkah 5').first().json.respons) }}",
         "options": {
           "responseCode": 200
         }
@@ -284,7 +753,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        2200,
+        4180,
         200
       ],
       "notes": "Langkah 9. Hanya kolom kontrak POST /chat."
@@ -302,8 +771,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1980,
-        520
+        2860,
+        620
       ],
       "notes": "G5: kegagalan dilaporkan jujur. Log_Error dan MODE_GAGAL menyusul di BL-12."
     }
@@ -371,7 +840,7 @@
       "main": [
         [
           {
-            "node": "Susun Prompt",
+            "node": "Baca Prospek",
             "type": "main",
             "index": 0
           }
@@ -379,6 +848,71 @@
         [
           {
             "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Prospek": {
+      "main": [
+        [
+          {
+            "node": "Baca Histori",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baca Histori": {
+      "main": [
+        [
+          {
+            "node": "Cari Prospek",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cari Prospek": {
+      "main": [
+        [
+          {
+            "node": "Prospek Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prospek Valid": {
+      "main": [
+        [
+          {
+            "node": "Susun Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Penolakan",
             "type": "main",
             "index": 0
           }
@@ -465,7 +999,90 @@
       "main": [
         [
           {
+            "node": "Siapkan Langkah 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siapkan Langkah 5": {
+      "main": [
+        [
+          {
+            "node": "Prospek Baru?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prospek Baru?": {
+      "main": [
+        [
+          {
+            "node": "Simpan Prospek",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tulis Histori?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Prospek": {
+      "main": [
+        [
+          {
+            "node": "Tulis Histori?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tulis Histori?": {
+      "main": [
+        [
+          {
+            "node": "Simpan Histori",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Kirim Jawaban",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simpan Histori": {
+      "main": [
+        [
+          {
+            "node": "Kirim Jawaban",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kirim Respons Gagal",
             "type": "main",
             "index": 0
           }

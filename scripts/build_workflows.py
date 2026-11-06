@@ -25,6 +25,13 @@ NAMESPACE = uuid.UUID("6f1c2b6e-4d1a-4f43-9a52-5d0c3e7b9a10")
 
 ENV_WAJIB = ["GOOGLE_SHEET_ID", "CLAUDE_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL", "WEB_ORIGIN"]
 
+# Kolom sheet persis seperti Section 9
+KOLOM_PROSPEK = [
+    "id_prospek", "nama_perusahaan", "kunci_normal", "sektor", "ae", "status", "kebutuhan",
+    "status_kebutuhan", "tgl_tindak_lanjut", "pengingat", "dibuat", "diubah",
+]
+KOLOM_HISTORI = ["id_histori", "waktu", "id_prospek", "aktor", "jenis", "nilai_lama", "nilai_baru", "catatan"]
+
 
 def baca_env() -> dict[str, str]:
     path = ROOT / ".env"
@@ -91,6 +98,55 @@ def sheets_baca(nama: str, posisi: tuple[int, int], sheet_id: str, sheet: str, c
             "documentId": {"__rl": True, "value": sheet_id, "mode": "id"},
             "sheetName": {"__rl": True, "value": sheet, "mode": "name"},
             "options": {},
+        },
+        catatan,
+        executeOnce=True,
+        alwaysOutputData=True,  # sheet berisi header saja tetap menghasilkan 1 item kosong
+        onError="continueErrorOutput",
+    )
+
+
+def sheets_tulis(
+    nama: str,
+    posisi: tuple[int, int],
+    sheet_id: str,
+    sheet: str,
+    operasi: str,
+    kolom: list[str],
+    sumber: str,
+    catatan: str,
+    cocok: list[str] | None = None,
+) -> dict:
+    """Menulis satu baris; nilai tiap kolom diambil dari objek `sumber` (ekspresi n8n tanpa {{ }})."""
+    return node(
+        nama,
+        "n8n-nodes-base.googleSheets",
+        4.7,
+        posisi,
+        {
+            "operation": operasi,
+            "documentId": {"__rl": True, "value": sheet_id, "mode": "id"},
+            "sheetName": {"__rl": True, "value": sheet, "mode": "name"},
+            "columns": {
+                "mappingMode": "defineBelow",
+                "value": {k: f"={{{{ {sumber}.{k} }}}}" for k in kolom},
+                "matchingColumns": cocok or [],
+                "schema": [
+                    {
+                        "id": k,
+                        "displayName": k,
+                        "required": False,
+                        "defaultMatch": False,
+                        "display": True,
+                        "type": "string",
+                        "canBeUsedToMatch": True,
+                    }
+                    for k in kolom
+                ],
+                "attemptToConvertTypes": False,
+                "convertFieldsToString": True,
+            },
+            "options": {"cellFormat": "RAW"},
         },
         catatan,
         executeOnce=True,
@@ -172,11 +228,11 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         {"PROMPT_AGENT": prompt, "SKEMA_JAWABAN": skema, "CFG": cfg},
     )
     kode_periksa = teks("n8n/code/pemeriksa_jawaban.js") + "\n" + teks("n8n/code/wf01/periksa_jawaban.js")
+    kode_cari = teks("n8n/code/normalisasi_kunci.js") + "\n" + teks("n8n/code/wf01/cari_prospek.js")
+    sid = env["GOOGLE_SHEET_ID"]
+    langkah5 = "$('Siapkan Langkah 5').first().json"
 
-    body_jawaban = (
-        "={{ JSON.stringify({ status: $json.status, jawaban: $json.jawaban, rujukan_kb: $json.rujukan_kb, "
-        "eskalasi: $json.eskalasi, id_prospek: $json.id_prospek, id_draf: $json.id_draf }) }}"
-    )
+    body_jawaban = "={{ JSON.stringify(" + langkah5 + ".respons) }}"
     body_tolak = "={{ JSON.stringify({ status: 'ditolak', pesan: $json.pesan }) }}"
     body_gagal = (
         "={{ JSON.stringify({ status: 'gagal', "
@@ -213,30 +269,34 @@ def bangun_wf01(env: dict[str, str]) -> dict:
             "",
             "Pertanyaan kosong ditolak dengan status 400.",
         ),
-        respond("Kirim Penolakan", (660, 520), 400, body_tolak, "Masukan tidak valid."),
-        sheets_baca(
-            "Baca Konfigurasi",
-            (660, 200),
-            env["GOOGLE_SHEET_ID"],
-            "Konfigurasi",
-            "Langkah 2. MODEL_AI, MODE_GAGAL, TANGGAL_SIMULASI.",
+        respond("Kirim Penolakan", (1980, 520), 400, body_tolak, "Masukan atau identitas prospek tidak valid."),
+        sheets_baca("Baca Konfigurasi", (660, 200), sid, "Konfigurasi", "Langkah 2. MODEL_AI, MODE_GAGAL, TANGGAL_SIMULASI."),
+        sheets_baca("Baca KB", (880, 200), sid, "KB", "Langkah 2. FR-18: KB dibaca ulang setiap permintaan."),
+        sheets_baca("Baca Prospek", (1100, 200), sid, "Prospek", "Langkah 2. Untuk mencari prospek (FR-08)."),
+        sheets_baca("Baca Histori", (1320, 200), sid, "Histori", "Langkah 2. Nomor id_histori berikutnya dan cek coba ulang."),
+        code_node(
+            "Cari Prospek",
+            (1540, 200),
+            kode_cari,
+            "FR-08. Cari per id_prospek atau kunci_normal; belum menulis. Sumber: n8n/code/normalisasi_kunci.js + wf01/cari_prospek.js",
         ),
-        sheets_baca(
-            "Baca KB",
-            (880, 200),
-            env["GOOGLE_SHEET_ID"],
-            "KB",
-            "Langkah 2. FR-18: KB dibaca ulang setiap permintaan.",
+        if_node(
+            "Prospek Valid",
+            (1760, 200),
+            "={{ $json.valid }}",
+            {"type": "boolean", "operation": "true", "singleValue": True},
+            "",
+            "ID yang tidak ada atau nama kosong ditolak sebelum memanggil model (hemat biaya).",
         ),
         code_node(
             "Susun Prompt",
-            (1100, 200),
+            (1980, 200),
             kode_susun,
             "Langkah 3. FR-02, FR-03. Sumber: n8n/code/wf01/susun_prompt.js + n8n/prompts/",
         ),
         if_node(
             "Pilih Model",
-            (1320, 200),
+            (2200, 200),
             "={{ $json.model_ai }}",
             {"type": "string", "operation": "equals"},
             "ollama",
@@ -244,7 +304,7 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ),
         http_model(
             "Panggil Ollama",
-            (1540, 60),
+            (2420, 60),
             env["OLLAMA_BASE_URL"].rstrip("/") + "/api/chat",
             "Langkah 3 (cadangan). Ollama lokal, tanpa kredensial.",
             kredensial=False,
@@ -252,7 +312,7 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ),
         http_model(
             "Panggil Claude",
-            (1540, 300),
+            (2420, 300),
             "https://api.anthropic.com/v1/messages",
             "Langkah 3. Kredensial: Claude API (demo). Structured outputs menjamin format JSON (AR-06).",
             kredensial=True,
@@ -260,20 +320,63 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ),
         code_node(
             "Ambil Teks Model",
-            (1760, 200),
+            (2640, 200),
             teks("n8n/code/wf01/ambil_teks_model.js"),
             "Menyamakan respons Claude dan Ollama. Sumber: n8n/code/wf01/ambil_teks_model.js",
         ),
         code_node(
             "Periksa Jawaban",
-            (1980, 200),
+            (2860, 200),
             kode_periksa,
             "Langkah 4. FR-05, PJ-01–PJ-04. Sumber: n8n/code/pemeriksa_jawaban.js + wf01/periksa_jawaban.js",
         ),
-        respond("Kirim Jawaban", (2200, 200), 200, body_jawaban, "Langkah 9. Hanya kolom kontrak POST /chat."),
+        code_node(
+            "Siapkan Langkah 5",
+            (3080, 200),
+            teks("n8n/code/wf01/siapkan_langkah5.js"),
+            "Langkah 5. Baris Prospek (bila baru) dan Histori; coba ulang tidak menggandakan Histori. Sumber: wf01/siapkan_langkah5.js",
+        ),
+        if_node(
+            "Prospek Baru?",
+            (3300, 200),
+            "={{ " + langkah5 + ".prospek_baru }}",
+            {"type": "boolean", "operation": "true", "singleValue": True},
+            "",
+            "Prospek yang sudah ada tidak menambah baris (FR-08).",
+        ),
+        sheets_tulis(
+            "Simpan Prospek",
+            (3520, 60),
+            sid,
+            "Prospek",
+            "appendOrUpdate",
+            KOLOM_PROSPEK,
+            langkah5 + ".prospek",
+            "Langkah 5. Upsert per kunci_normal: coba ulang tidak menambah baris (NFR-04).",
+            cocok=["kunci_normal"],
+        ),
+        if_node(
+            "Tulis Histori?",
+            (3740, 200),
+            "={{ " + langkah5 + ".tulis_histori }}",
+            {"type": "boolean", "operation": "true", "singleValue": True},
+            "",
+            "False bila Histori untuk id_permintaan ini sudah tercatat (coba ulang).",
+        ),
+        sheets_tulis(
+            "Simpan Histori",
+            (3960, 60),
+            sid,
+            "Histori",
+            "append",
+            KOLOM_HISTORI,
+            langkah5 + ".histori",
+            "Langkah 5. Histori hanya ditambah, tidak pernah diubah (NFR-05).",
+        ),
+        respond("Kirim Jawaban", (4180, 200), 200, body_jawaban, "Langkah 9. Hanya kolom kontrak POST /chat."),
         respond(
             "Kirim Respons Gagal",
-            (1980, 520),
+            (2860, 620),
             502,
             body_gagal,
             "G5: kegagalan dilaporkan jujur. Log_Error dan MODE_GAGAL menyusul di BL-12.",
@@ -287,8 +390,15 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ("Cek Masukan", 1, "Kirim Penolakan"),
         ("Baca Konfigurasi", 0, "Baca KB"),
         ("Baca Konfigurasi", 1, "Kirim Respons Gagal"),
-        ("Baca KB", 0, "Susun Prompt"),
+        ("Baca KB", 0, "Baca Prospek"),
         ("Baca KB", 1, "Kirim Respons Gagal"),
+        ("Baca Prospek", 0, "Baca Histori"),
+        ("Baca Prospek", 1, "Kirim Respons Gagal"),
+        ("Baca Histori", 0, "Cari Prospek"),
+        ("Baca Histori", 1, "Kirim Respons Gagal"),
+        ("Cari Prospek", 0, "Prospek Valid"),
+        ("Prospek Valid", 0, "Susun Prompt"),
+        ("Prospek Valid", 1, "Kirim Penolakan"),
         ("Susun Prompt", 0, "Pilih Model"),
         ("Pilih Model", 0, "Panggil Ollama"),
         ("Pilih Model", 1, "Panggil Claude"),
@@ -297,7 +407,16 @@ def bangun_wf01(env: dict[str, str]) -> dict:
         ("Panggil Claude", 0, "Ambil Teks Model"),
         ("Panggil Claude", 1, "Kirim Respons Gagal"),
         ("Ambil Teks Model", 0, "Periksa Jawaban"),
-        ("Periksa Jawaban", 0, "Kirim Jawaban"),
+        ("Periksa Jawaban", 0, "Siapkan Langkah 5"),
+        ("Siapkan Langkah 5", 0, "Prospek Baru?"),
+        ("Prospek Baru?", 0, "Simpan Prospek"),
+        ("Prospek Baru?", 1, "Tulis Histori?"),
+        ("Simpan Prospek", 0, "Tulis Histori?"),
+        ("Simpan Prospek", 1, "Kirim Respons Gagal"),
+        ("Tulis Histori?", 0, "Simpan Histori"),
+        ("Tulis Histori?", 1, "Kirim Jawaban"),
+        ("Simpan Histori", 0, "Kirim Jawaban"),
+        ("Simpan Histori", 1, "Kirim Respons Gagal"),
     )
 
     return {

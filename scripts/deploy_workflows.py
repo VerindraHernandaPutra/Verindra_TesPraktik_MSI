@@ -82,6 +82,17 @@ def butuh_kredensial(node: dict) -> bool:
     return node["type"] in TIPE_BUTUH_KREDENSIAL or p.get("authentication") == "predefinedCredentialType"
 
 
+def jenis_kredensial(node: dict, tersedia: dict[str, dict]) -> str | None:
+    p = node.get("parameters", {})
+    if p.get("authentication") == "predefinedCredentialType":
+        calon = [p.get("nodeCredentialType")]
+    elif node["type"] == "n8n-nodes-base.googleSheets":
+        calon = ["googleSheetsOAuth2Api", "googleApi"]
+    else:
+        calon = []
+    return next((c for c in calon if c in tersedia), None)
+
+
 def deploy(api: N8n, file: Path) -> None:
     baru = json.loads(file.read_text(encoding="utf-8"))
     nama = baru["name"]
@@ -97,17 +108,30 @@ def deploy(api: N8n, file: Path) -> None:
         return
 
     kredensial_lama = {n["name"]: n["credentials"] for n in lama["nodes"] if n.get("credentials")}
-    tanpa = []
+    # Rujukan kredensial per jenis (mis. googleSheetsOAuth2Api) untuk node baru; isi kredensial tidak pernah dibaca.
+    per_jenis: dict[str, dict] = {}
+    for kred in kredensial_lama.values():
+        for jenis, rujukan in kred.items():
+            per_jenis.setdefault(jenis, rujukan)
+
+    tanpa, diwarisi = [], []
     for n in body["nodes"]:
         if n["name"] in kredensial_lama:
             n["credentials"] = kredensial_lama[n["name"]]
         elif butuh_kredensial(n):
-            tanpa.append(n["name"])
+            jenis = jenis_kredensial(n, per_jenis)
+            if jenis:
+                n["credentials"] = {jenis: per_jenis[jenis]}
+                diwarisi.append(n["name"])
+            else:
+                tanpa.append(n["name"])
 
     hasil = api.panggil("PUT", f"/workflows/{lama['id']}", body)
     terbit = bool(hasil.get("activeVersionId")) and hasil.get("activeVersionId") == hasil.get("versionId")
     status = "versi baru sudah di-publish" if terbit else "disimpan sebagai draf (workflow belum di-publish)"
     print(f"[{nama}] diperbarui (id {lama['id']}): {status}; kredensial dipertahankan di {len(kredensial_lama)} node.")
+    if diwarisi:
+        print("  Node baru memakai kredensial sejenis yang sudah terpasang: " + ", ".join(diwarisi))
     if tanpa:
         print("  Node baru tanpa kredensial, pasang di n8n: " + ", ".join(tanpa))
 

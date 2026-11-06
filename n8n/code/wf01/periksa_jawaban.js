@@ -5,20 +5,14 @@ const keluaran = $input.first().json;
 
 const cek = periksaJawaban(keluaran.keluaran_model, ctx.kode_kb_valid, ctx.pertanyaan);
 
-// Pencarian prospek berdasarkan nama baru dibuat di BL-10; untuk sekarang hanya ID P01, P02, dst.
-const idProspek = /^P\d{2,}$/i.test(ctx.prospek) ? ctx.prospek.toUpperCase() : null;
-
 return [
   {
     json: {
-      // Kontrak POST /chat (Section 10)
-      status: 'ok',
       jawaban: cek.hasil.jawaban,
       rujukan_kb: cek.hasil.rujukan_kb,
       eskalasi: cek.hasil.eskalasi,
-      id_prospek: idProspek,
-      id_draf: null,
-      // Data untuk langkah 5–8 (BL-10, BL-11); tidak dikirim ke halaman
+      id_prospek: $('Cari Prospek').first().json.prospek.id_prospek,
+      // Data untuk langkah 5–8; respons halaman disusun di "Siapkan Langkah 5"
       id_permintaan: ctx.id_permintaan,
       pertanyaan: ctx.pertanyaan,
       topik: cek.hasil.topik,
