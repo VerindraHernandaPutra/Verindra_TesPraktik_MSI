@@ -92,9 +92,11 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 - Halaman web lama (web/index.html) dimigrasi ke template admin; formulir pendaftaran memakai one-page template. Struktur, kelas, dan gaya template dipertahankan; tidak ada gaya buatan sendiri di luar yang sudah ada di template.
 - Salinan template ada di web/templates/admin (Duralux) dan web/templates/onepage (Eventify), hanya halaman dan aset yang dipakai.
 
-- Perubahan arah (7 Nov 2026, setelah melihat hasil sesi 5): situs dibuat seperti bisnis nyata. Situs publik (one-page, iklan Nusantara Awards 2026 + tanya asisten + formulir pendaftaran) di http://localhost:8000/; panel admin tanpa login di http://localhost:8000/admin/. Kata "simulasi" tidak ditampilkan di situs; centang formulir menjadi "Saya menyetujui ketentuan pendaftaran" (nama kolom kontrak setuju\_simulasi tidak berubah); AR-04 agent menjadi "asisten AI program awards". Halaman Chat pindah dari admin ke situs publik. Nilai status di sheet tetap "Siap kirim (simulasi)" dan "Terkirim (simulasi)" (Section 9); tampilan menyembunyikan "(simulasi)".
+- Perubahan arah (7 Nov 2026, setelah melihat hasil sesi 5): situs dibuat seperti bisnis nyata. Situs publik (one-page, iklan Company Award Website 2026 + tanya asisten + formulir pendaftaran) di http://localhost:8000/; panel admin tanpa login di http://localhost:8000/admin/. Kata "simulasi" tidak ditampilkan di situs; centang formulir menjadi "Saya menyetujui ketentuan pendaftaran" (nama kolom kontrak setuju\_simulasi tidak berubah); AR-04 agent menjadi "asisten AI program awards". Halaman Chat pindah dari admin ke situs publik. Nilai status di sheet tetap "Siap kirim (simulasi)" dan "Terkirim (simulasi)" (Section 9); tampilan menyembunyikan "(simulasi)".
 
 - R1 (7 Nov 2026): bila perusahaan sudah tercatat (misalnya dari chat) lalu mendaftar, /pendaftaran tidak menambah baris tetapi melengkapi kolom yang masih kosong (sektor, nama\_pic, no\_hp\_pic, kategori) dengan Histori ubah\_peserta per kolom; isi lama tidak pernah ditimpa dan prospek arsip tidak diubah.
+
+- R2 (7 Nov 2026): tema situs publik memakai varian index4 template (terang, aksen biru). Nama merek di kedua situs: "Company Award Website" (judul, logo SVG buatan sendiri, footer, meta). Bagian "Tanya Asisten" dihapus dari halaman; asisten akan menjadi bubble chat mengambang di pojok kanan bawah (R3), sedangkan pendaftaran tetap berupa formulir (#daftar).
 
 ## 8. Rencana sesi dan model
 

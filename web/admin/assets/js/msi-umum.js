@@ -1,4 +1,4 @@
-// SIMULASI MSI — fungsi bersama semua halaman admin (template Duralux): akses n8n, peran simulasi, penampil pesan.
+// Fungsi bersama semua halaman admin: akses n8n, peran contoh (bukan login), penampil pesan.
 // Alamat n8n dibaca dari web/config.js (window.CONFIG). Teks dari server selalu lewat textContent/esc, tidak pernah HTML.
 window.Msi = (function () {
   'use strict';

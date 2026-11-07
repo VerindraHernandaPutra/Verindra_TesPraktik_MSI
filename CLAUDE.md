@@ -26,7 +26,7 @@ Sumber kebenaran: docs/PERENCANAAN.md. Jika ada yang tidak tertulis di sana, tan
 
 ## Ekstensi E1
 - Ikuti docs/EKSTENSI_E1.md; aturan docs/PERENCANAAN.md tetap berlaku.
-- Situs publik (one-page template Eventify) ada di web/ (index.html + assets/), panel admin (template Duralux) di web/admin/, dibuka lewat /admin tanpa login. Jangan mengganti gaya atau struktur template, cukup isi dan sambungkan.
+- Situs publik (one-page template varian index4, merek "Company Award Website") ada di web/ (index.html + assets/), panel admin (template Duralux) di web/admin/, dibuka lewat /admin tanpa login. Jangan mengganti gaya atau struktur template, cukup isi dan sambungkan.
 - Nomor HP hanya pola dummy 0812-0000-xxxx; jangan pernah membuat tautan wa.me, tel:, sms:, atau pemanggilan API pengirim.
 - Arsip = aktif FALSE; jangan menghapus baris Prospek atau Histori.
 - Data tetap fiktif: nomor HP hanya pola dummy, tidak ada pengiriman nyata. Kata "simulasi" hanya boleh ada di nama nilai data (Section 9), kode, dan dokumen repo.
