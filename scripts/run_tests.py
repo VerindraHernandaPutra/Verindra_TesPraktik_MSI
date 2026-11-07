@@ -322,6 +322,57 @@ def main() -> None:
             catat("T-11", ok, f"{r.get('id_prospek')} {p.get('status')}, {p.get('status_kebutuhan')}, {p.get('ae')}, sumber={p.get('sumber')}, aktif={p.get('aktif')}; Histori prospek_baru {len(h)}", dt)
         jalankan("T-11", t11)
 
+        # --- Ekstensi E1: formulir pendaftaran POST /pendaftaran (setelah T-11) ---
+        def daftar(nama, idp=None, **lain):
+            idp = idp or f"uji-daftar-{datetime.now():%H%M%S}-{int(time.time() * 1000) % 100000}"
+            body = {"id_permintaan": idp, "nama_perusahaan": nama, "sektor": "Energi", "nama_pic": "Budi Santoso",
+                    "no_hp_pic": "0812-0000-0011", "kategori": "CSR", "setuju_simulasi": True, **lain}
+            k, r, dt = api("POST", "/pendaftaran", body)
+            return k, r, dt, idp
+
+        def t31():
+            sebelum = hitung(data())
+            k, r, dt, _ = daftar("PT Simulasi Nomor Asli", no_hp_pic="081234567890")
+            k2, r2, _, _ = daftar("PT Simulasi Tanpa Centang", setuju_simulasi=False)
+            ok = k == 400 and "pola dummy" in r.get("pesan", "") and k2 == 400 and sebelum == hitung(data())
+            catat("T-31", ok, f"HP non-dummy HTTP {k}; tanpa centang simulasi HTTP {k2}; data tidak berubah: {sebelum == hitung(data())}", dt)
+        jalankan("T-31", t31)
+
+        def t32():
+            sebelum = data()
+            k, r, dt, idp = daftar("PT Simulasi Formulir Baru")
+            t = data()
+            p = next((x for x in t["Prospek"] if x["id_prospek"] == r.get("id_prospek")), {})
+            h = [x for x in t["Histori"] if x["jenis"] == "pendaftaran" and x["catatan"].endswith(idp)]
+            k2, r2, _, _ = daftar("PT Simulasi Formulir Baru", idp)
+            sama = hitung(t) == hitung(data())
+            ok = (k == 200 and r.get("baru") is True and len(t["Prospek"]) == len(sebelum["Prospek"]) + 1
+                  and p.get("sumber") == "formulir" and p.get("aktif") == "TRUE" and p.get("status") == "Baru"
+                  and p.get("no_hp_pic") == "0812-0000-0011" and len(h) == 1
+                  and r2.get("berulang") is True and r2.get("id_prospek") == r.get("id_prospek") and sama)
+            catat("T-32", ok, f"{r.get('id_prospek')} sumber={p.get('sumber')} aktif={p.get('aktif')}; Histori pendaftaran {len(h)}; "
+                              f"coba ulang berulang={r2.get('berulang')}, tanpa baris baru: {sama}", dt)
+        jalankan("T-32", t32)
+
+        def t33():
+            sebelum = data()
+            k, r, dt, idp = daftar("PT. Tani Makmur")
+            t = data()
+            dup = [x for x in t["Histori"] if x["jenis"] == "duplikat_terdeteksi" and x["catatan"].endswith(idp)]
+            ok = (k == 200 and r.get("baru") is False and r.get("id_prospek") == "P03" and "sudah terdaftar sebagai P03" in r.get("pesan", "")
+                  and len(t["Prospek"]) == len(sebelum["Prospek"]) and len(dup) == 1)
+            catat("T-33", ok, f"dikenali {r.get('id_prospek')}: \"{r.get('pesan')}\"; Prospek tetap {len(t['Prospek'])}; Histori duplikat {len(dup)}", dt)
+        jalankan("T-33", t33)
+
+        def t34():
+            k, r, dt, idp = daftar("PT Simulasi Formulir Bertanya", pertanyaan="Apakah pendaftaran dipungut biaya?")
+            c = r.get("chat") or {}
+            perc = [x for x in data()["Percakapan"] if x["id_permintaan"] == f"{idp}-awal"]
+            ok = (k == 200 and r.get("baru") is True and c.get("status") == "ok" and c.get("rujukan_kb") == ["KB01"]
+                  and c.get("id_prospek") == r.get("id_prospek") and len(perc) == 1)
+            catat("T-34", ok, f"{r.get('id_prospek')}; chat {c.get('status')} rujukan {c.get('rujukan_kb')}; Percakapan {len(perc)}", dt)
+        jalankan("T-34", t34)
+
         # --- Kinerja ---
         def t26():
             waktu = [w for w in simpan.get("waktu_t01", []) if w][:3]

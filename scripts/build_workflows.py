@@ -11,6 +11,7 @@ Keluaran (n8n/workflows/):
   WF-03_keputusan_status.json   POST /approve, /prospek/status, /prospek/draf
   WF-04_pengingat_harian.json   jadwal 08.00, manual, POST /pengingat
   WF-05_penanganan_error.json   error workflow (Log_Error)
+  WF-06_pendaftaran_peserta.json  Ekstensi E1: POST /pendaftaran
   WF-90_reset_seed.json         utilitas uji: reset seed, ubah Konfigurasi, baca data
 
 NODE GABUNGAN: beberapa file kode yang berurutan dijalankan dalam SATU Code node agar kanvas n8n sederhana.
@@ -34,6 +35,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 NAMESPACE = uuid.UUID("6f1c2b6e-4d1a-4f43-9a52-5d0c3e7b9a10")
 ENV_WAJIB = ["GOOGLE_SHEET_ID", "CLAUDE_MODEL", "WEB_ORIGIN"]
+# Alamat webhook n8n dilihat dari DALAM container n8n (WF-06 meneruskan pertanyaan awal ke POST /chat).
+WEBHOOK_INTERNAL_BAWAAN = "http://localhost:5678/webhook"
 SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets/"
 CLAUDE_API = "https://api.anthropic.com/v1/messages"
 SHEET_SEED = ["KB", "Prospek", "Percakapan", "Antrean_Staf", "Draf", "Histori", "Konfigurasi", "Log_Error"]
@@ -573,6 +576,63 @@ def bangun_wf05(env) -> dict:
                            ("Catat Gagal", 0, "Tulis Log Error")], error_wf=False)
 
 
+# ---------- WF-06 (Ekstensi E1) ----------
+
+def bangun_wf06(env) -> dict:
+    """POST /pendaftaran (E-01): formulir > anti-dobel > [Prospek +] Histori (atomik) > pertanyaan awal ke WF-01."""
+    _AWALAN_ID[0] = "WF-06"
+    r = Rakitan()
+    wf = "WF-06 Pendaftaran dan peserta"
+    sheets = ["Prospek", "Histori", "Log_Error"]
+    aturan = ("n8n/code/normalisasi_kunci.js", "n8n/code/sheet_tulis.js", "n8n/code/aturan_pendaftaran.js")
+    proses = "$('Proses Pendaftaran').first().json"
+    chat = "$('Teruskan ke Chat')"
+    url_chat = (env.get("N8N_WEBHOOK_INTERNAL") or WEBHOOK_INTERNAL_BAWAAN).rstrip("/") + "/chat"
+    y = 300
+    teruskan = http("Teruskan ke Chat", (1320, y - 100), "POST", url_chat,
+                    "Pertanyaan awal (opsional) ke WF-01 POST /chat; id_permintaan turunan agar coba ulang tidak dobel. "
+                    "Gagal di sini tidak membatalkan pendaftaran yang sudah tercatat.",
+                    body_expr="={{ JSON.stringify(" + proses + ".teruskan.body_chat) }}", timeout=90000,
+                    on_error="continueRegularOutput")
+    teruskan["parameters"]["options"]["response"] = {"response": {"neverError": True}}
+    nodes = [
+        webhook("Terima Pendaftaran", (0, y), "POST", "pendaftaran", env, "POST /pendaftaran (EKSTENSI_E1 E-01)."),
+        baca_sheet("Baca Sheet Pendaftaran", (220, y), env, sheets),
+        r.tambah("Proses Pendaftaran", (440, y), [
+            langkah("Validasi Pendaftaran", gabung(*aturan, "n8n/code/wf06/validasi_pendaftaran.js"),
+                    masukan="Terima Pendaftaran", berhenti=TOLAK_VALID),
+            langkah("Olah Sheet Pendaftaran", kode_olah(sheets), masukan="input"),
+            langkah("Cocokkan Prospek", gabung(*aturan, "n8n/code/wf06/cocokkan_prospek.js")),
+        ], "Validasi formulir (HP dummy 0812-0000-xxxx), anti-dobel per kunci_normal (FR-08), idempotensi id_permintaan."),
+        if_benar("Tulis Pendaftaran?", (660, y), "={{ $json.aksi === 'tulis' }}", "False: berulang atau ditolak."),
+        tulis_sheet("Tulis Pendaftaran", (880, y - 100), env, "SATU batchUpdate atomik: Prospek baru + Histori, atau Histori duplikat saja."),
+        if_benar("Berulang?", (880, y + 100), "={{ $json.aksi === 'lama' }}", "True: hasil lama tanpa menulis; False: ditolak (400)."),
+        respond_dinamis("Kirim Penolakan Pendaftaran", (1100, y + 260), "Ditolak karena aturan (400)."),
+        if_benar("Ada Pertanyaan Awal?", (1100, y), "={{ " + proses + ".teruskan.perlu_chat === true }}",
+                 "Pertanyaan awal bersifat opsional."),
+        teruskan,
+        respond("Kirim Hasil Pendaftaran", (1540, y), 200,
+                "={{ JSON.stringify(Object.assign({}, " + proses + ".respons, { chat: !" + chat + ".isExecuted ? null : ("
+                + chat + ".first().json.status ? " + chat + ".first().json : { status: 'gagal', pesan: "
+                "'Pertanyaan awal belum terjawab. Silakan tanyakan lagi lewat halaman chat.' }) })) }}",
+                "Respons pendaftaran + hasil chat (atau null bila tanpa pertanyaan)."),
+    ]
+    gn, gk, catat = jalur_gagal(r, env, 440, y + 420, wf, "Validasi Pendaftaran", "Olah Sheet Pendaftaran", " (Pendaftaran)")
+    nodes += gn
+    r.selesaikan(nodes)
+    koneksi = [
+        ("Terima Pendaftaran", 0, "Baca Sheet Pendaftaran"), ("Baca Sheet Pendaftaran", 0, "Proses Pendaftaran"),
+        ("Proses Pendaftaran", 0, "Tulis Pendaftaran?"), ("Tulis Pendaftaran?", 0, "Tulis Pendaftaran"),
+        ("Tulis Pendaftaran?", 1, "Berulang?"), ("Berulang?", 0, "Ada Pertanyaan Awal?"),
+        ("Berulang?", 1, "Kirim Penolakan Pendaftaran"), ("Tulis Pendaftaran", 0, "Ada Pertanyaan Awal?"),
+        ("Ada Pertanyaan Awal?", 0, "Teruskan ke Chat"), ("Ada Pertanyaan Awal?", 1, "Kirim Hasil Pendaftaran"),
+        ("Teruskan ke Chat", 0, "Kirim Hasil Pendaftaran"),
+        *[(n, 1, catat) for n in ("Baca Sheet Pendaftaran", "Proses Pendaftaran", "Tulis Pendaftaran")],
+        *gk,
+    ]
+    return workflow_dasar(wf, nodes, koneksi)
+
+
 # ---------- WF-90 (utilitas uji) ----------
 
 def bangun_wf90(env) -> dict:
@@ -624,7 +684,8 @@ def main() -> None:
     for nama_file, pembangun in (
         ("WF-01_agent_chat.json", bangun_wf01), ("WF-02_data_panel.json", bangun_wf02),
         ("WF-03_keputusan_status.json", bangun_wf03), ("WF-04_pengingat_harian.json", bangun_wf04),
-        ("WF-05_penanganan_error.json", bangun_wf05), ("WF-90_reset_seed.json", bangun_wf90),
+        ("WF-05_penanganan_error.json", bangun_wf05), ("WF-06_pendaftaran_peserta.json", bangun_wf06),
+        ("WF-90_reset_seed.json", bangun_wf90),
     ):
         wf = pembangun(env)
         nama = {n["name"] for n in wf["nodes"]}
