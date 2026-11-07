@@ -28,9 +28,26 @@
   function waktu(kunci) {
     return function (v, t, d) { var w = d[kunci] || ''; return t === 'display' ? M.esc(M.formatWaktu(w) || '–') : w; };
   }
+  var SUMBER = { chat: ['Chat', 'info'], catatan_ae: ['Catatan AE', 'warning'], jawaban_staf: ['Jawaban staf', 'success'] };
   function sumber(v, t, d) {
-    var s = d.id_percakapan ? 'Chat' : 'Catatan AE';
-    return t === 'display' ? '<span class="badge bg-soft-' + (d.id_percakapan ? 'info text-info' : 'warning text-warning') + '">' + s + '</span>' : s;
+    var s = SUMBER[d.sumber] || (d.id_percakapan ? SUMBER.chat : SUMBER.catatan_ae);
+    var label = s[0] + (d.id_tiket ? ' · ' + d.id_tiket : '');
+    return t === 'display' ? '<span class="badge bg-soft-' + s[1] + ' text-' + s[1] + '">' + M.esc(label) + '</span>' : label;
+  }
+  function usia(iso) {
+    var ms = Date.now() - new Date(iso).getTime();
+    if (!iso || isNaN(ms)) return '–';
+    var menit = Math.max(0, Math.round(ms / 60000));
+    if (menit < 60) return menit + ' menit lalu';
+    var jam = Math.round(menit / 60);
+    return jam < 24 ? jam + ' jam lalu' : Math.round(jam / 24) + ' hari lalu';
+  }
+  function statusTiket(v, t, d) {
+    if (t !== 'display') return d.status;
+    var warna = d.status === 'Baru' ? 'danger' : 'warning';
+    var info = d.status === 'Ditangani' && d.ditangani_oleh ? '<div class="fs-12 text-muted">oleh ' + M.esc(d.ditangani_oleh) + '</div>' : '';
+    var draf = d.draf_jawaban ? '<div class="fs-12 text-muted">Draf ' + M.esc(d.draf_jawaban.id_draf) + ' · ' + M.esc(M.bersih(d.draf_jawaban.status)) + '</div>' : '';
+    return '<span class="badge bg-soft-' + warna + ' text-' + warna + '">' + M.esc(d.status) + '</span>' + info + draf;
   }
   function hp(v, t, d) {
     if (t !== 'display') return d.no_hp_pic || '';
@@ -43,8 +60,9 @@
       { title: 'Tiket', data: 'id_tiket' },
       { title: 'Perusahaan', data: 'nama_perusahaan', render: perusahaan },
       { title: 'Pertanyaan', data: 'pertanyaan', render: teksSaja('pertanyaan', 90) },
-      { title: 'Alasan', data: 'alasan', render: teksSaja('alasan', 70) },
-      { title: 'Waktu', data: 'waktu', render: waktu('waktu') },
+      { title: 'Alasan', data: 'alasan', render: teksSaja('alasan', 60) },
+      { title: 'Status', data: 'status', render: statusTiket },
+      { title: 'Usia', data: 'waktu', render: function (v, t) { return t === 'display' ? M.esc(usia(v)) : v; } },
       { title: '', data: null, orderable: false, searchable: false, className: 'text-end', render: aksi },
     ],
     draf: [
@@ -63,7 +81,7 @@
     tabel[jenis] = $('#tabel-' + jenis).DataTable({
       data: data[jenis],
       columns: kolom,
-      order: [[0, 'desc']],
+      order: [[0, jenis === 'antrean' ? 'asc' : 'desc']],
       pageLength: 10,
       lengthMenu: [10, 25, 50],
       language: {
@@ -122,15 +140,20 @@
     var nama = (d.nama_perusahaan || '') + (d.id_prospek ? ' (' + d.id_prospek + ')' : '');
 
     if (jenis === 'antrean') {
-      el('judul-detail').textContent = 'Tiket ' + d.id_tiket;
+      el('judul-detail').textContent = 'Tiket ' + d.id_tiket + ' · ' + d.status;
       isi.append(bagian('Perusahaan', nama), bagian('Pertanyaan', d.pertanyaan, 'bg-soft-dark rounded p-3'),
-        bagian('Jawaban asisten', d.jawaban || '–'), bagian('Alasan eskalasi', d.alasan), bagian('Status', d.status + ' · ' + M.formatWaktu(d.waktu)));
+        bagian('Jawaban asisten', d.jawaban || '–'), bagian('Alasan eskalasi', d.alasan),
+        bagian('Status', d.status + (d.ditangani_oleh ? ' oleh ' + d.ditangani_oleh : '') + ' · masuk ' + M.formatWaktu(d.waktu) + ' (' + usia(d.waktu) + ')'));
+      aksiTiket(d, isi, kaki);
+      modal('modal-detail').show();
+      return;
     } else {
       el('judul-detail').textContent = 'Draf ' + d.id_draf + ' · ' + JUDUL[jenis];
       isi.append(bagian('Perusahaan', nama));
       if (d.pertanyaan) isi.append(bagian('Pertanyaan asal', d.pertanyaan));
       isi.append(bagian('Isi draf', d.isi_draf, 'bg-soft-dark rounded p-3'));
       if (d.catatan) isi.append(bagian('Catatan', d.catatan));
+      if (d.id_tiket) isi.append(bagian('Menjawab tiket', d.id_tiket + ' · tiket selesai otomatis saat draf ini terkirim'));
       isi.append(bagian('Sumber', (d.id_percakapan ? 'Percakapan ' + d.id_percakapan : 'Catatan AE') + ' · dibuat ' + M.formatWaktu(d.dibuat)));
     }
 
@@ -166,6 +189,63 @@
       kaki.append(tutup);
     }
     modal('modal-detail').show();
+  }
+
+  // Tindakan tiket (Opsi B): ambil, jawab lewat draf, tandai selesai. Semua lewat POST /tiket.
+  function aksiTiket(d, isi, kaki) {
+    var tutup = tombol('Tutup', 'btn-light-brand', function () { modal('modal-detail').hide(); });
+    var formulir = buat('div', 'mt-2');
+    var label = buat('label', 'form-label fw-semibold');
+    var kotak = buat('textarea', 'form-control');
+    kotak.rows = 4;
+    formulir.append(label, kotak);
+    formulir.hidden = true;
+    isi.append(formulir);
+    var mode = null;
+
+    function siapkan(m, teksLabel, placeholder) {
+      mode = m;
+      formulir.hidden = false;
+      label.textContent = teksLabel;
+      kotak.placeholder = placeholder;
+      kotak.value = '';
+      kotak.focus();
+      kirimForm.hidden = false;
+      kirimForm.textContent = m === 'jawab' ? 'Buat draf jawaban' : 'Simpan, tiket selesai';
+    }
+    var kirimForm = tombol('', 'btn-primary', function (t) {
+      var teks = kotak.value.trim();
+      if (!teks) { kotak.focus(); return M.pesan('pesan-detail', 'danger', mode === 'jawab' ? 'Tulis jawaban dulu.' : 'Catatan penyelesaian wajib diisi.'); }
+      ubahTiket(t, d.id_tiket, mode, mode === 'jawab' ? { jawaban: teks } : { catatan: teks });
+    });
+    kirimForm.hidden = true;
+
+    var tombolTombol = [tutup];
+    if (d.status === 'Baru') tombolTombol.push(tombol('Ambil tiket', 'btn-light-brand', function (t) { ubahTiket(t, d.id_tiket, 'ambil', {}); }));
+    if (d.draf_jawaban) {
+      isi.insertBefore(bagian('Draf jawaban', d.draf_jawaban.id_draf + ' · ' + M.bersih(d.draf_jawaban.status) + ' (lanjutkan di tab draf)'), formulir);
+    } else {
+      tombolTombol.push(tombol('Jawab lewat draf', 'btn-light-brand', function () {
+        siapkan('jawab', 'Jawaban untuk calon peserta', 'Tulis jawaban staf; akan menjadi draf yang perlu disetujui sebelum dikirim.');
+      }));
+    }
+    tombolTombol.push(tombol('Tandai selesai', 'btn-light-brand', function () {
+      siapkan('selesai', 'Catatan penyelesaian', 'Misalnya: sudah dijawab lewat telepon.');
+    }));
+    tombolTombol.push(kirimForm);
+    tombolTombol.forEach(function (b) { kaki.append(b); });
+  }
+
+  async function ubahTiket(t, idTiket, aksi, tambahan) {
+    t.disabled = true;
+    var r = await M.api('POST', '/tiket', Object.assign({ id_tiket: idTiket, aksi: aksi, oleh: 'staf' }, tambahan));
+    if (r.ok) {
+      modal('modal-detail').hide();
+      M.pesan('pesan-panel', 'success', r.data.pesan);
+      return muat(false);
+    }
+    M.pesan('pesan-detail', 'danger', r.data.pesan || 'Tiket gagal diperbarui. Silakan coba ulang.');
+    t.disabled = false;
   }
 
   async function putuskan(t, idDraf, keputusan, catatan) {

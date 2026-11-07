@@ -108,6 +108,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - S3 (7 Nov 2026): Panel Staf dibangun ulang dari kartu bertumpuk menjadi kartu ringkasan, lima tab (Antrean eskalasi, Menunggu persetujuan, Disetujui, Siap kirim, Terkirim) berisi tabel DataTables, dan modal detail berisi tindakan sesuai status. Draf Siap kirim tanpa No. HP menampilkan peringatan, tombol Kirim nonaktif, dan tautan “Lengkapi di Tabel Peserta” (index.html?lengkapi=Pxx membuka modal ubah prospek itu). Kontrak API tidak berubah.
 
+- Opsi B (7 Nov 2026): tiket eskalasi kini punya siklus Baru → Ditangani → Selesai lewat POST /tiket. Staf bisa mengambil tiket, menjawab lewat draf (draf baru Menunggu persetujuan bertanda “Jawaban staf atas Txxxx” yang mengikuti alur persetujuan biasa), atau menandai selesai dengan catatan. Saat draf jawaban terkirim, tiket ditutup otomatis dalam batch yang sama. Tidak ada kolom sheet baru; jejak di Histori jenis ubah\_tiket.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

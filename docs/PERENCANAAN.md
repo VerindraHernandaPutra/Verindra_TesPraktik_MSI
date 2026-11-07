@@ -401,7 +401,7 @@ Format ID memakai prefiks dan nomor urut empat digit, misalnya C0001 untuk perca
 | Status pipeline | Baru, Kualifikasi, Follow-up, Penawaran draf |
 | Status kebutuhan | Belum terkonfirmasi, Terkonfirmasi |
 | Status draf | Menunggu persetujuan, Disetujui, Ditolak, Siap kirim (simulasi), Terkirim (simulasi) (hanya dari Siap kirim (simulasi)) |
-| Jenis histori | prospek\_baru, duplikat\_terdeteksi, ubah\_status, ubah\_kebutuhan, draf\_dibuat, draf\_diputuskan, pendaftaran, ubah\_peserta, arsip\_peserta, kirim\_simulasi (empat terakhir dari E1) |
+| Jenis histori | prospek\_baru, duplikat\_terdeteksi, ubah\_status, ubah\_kebutuhan, draf\_dibuat, draf\_diputuskan, pendaftaran, ubah\_peserta, arsip\_peserta, kirim\_simulasi (dari E1), ubah\_tiket (siklus tiket eskalasi: Baru → Ditangani → Selesai, catatan penyelesaian di kolom catatan) |
 
 ### Aturan anti-dobel (FR-08)
 
@@ -463,7 +463,8 @@ Halaman web hanya berbicara dengan n8n lewat kontrak ini, jadi bagian depan dan 
 | POST /prospek/draf | id\_prospek, catatan, oleh | status ok, id\_draf, isi\_draf berstatus Menunggu persetujuan | Catatan kosong; AE meminta draf untuk prospek milik AE lain |
 | POST /pendaftaran (E1) | id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic (pola dummy 0812-0000-xxxx), kategori, pertanyaan (opsional), setuju\_simulasi = true | status ok, baru (true/false), id\_prospek, nama\_perusahaan, pesan (“… tercatat sebagai P12” atau “… sudah terdaftar sebagai P03; data tidak ditambah.”), berulang, dilengkapi (kolom kosong pada prospek lama yang diisi dari formulir: sektor, nama\_pic, no\_hp\_pic, kategori; tidak pernah menimpa isi lama), chat (hasil POST /chat untuk pertanyaan awal dengan id\_permintaan + “-awal”, atau null) | Kolom wajib kosong, nomor HP bukan pola dummy, kategori di luar daftar, centang simulasi tidak dicentang; penulisan gagal → status gagal |
 | POST /peserta (E1) | aksi (tambah, ubah, atau arsip), oleh (admin, ae\_a, ae\_b); tambah: id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae (opsional, admin); ubah: id\_prospek + kolom yang diubah (nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae khusus admin); arsip: id\_prospek; catatan opsional | status ok, aksi, id\_prospek, pesan; tambah: berulang; ubah: daftar kolom diubah | Peran staf; AE mengubah prospek AE lain; nama sudah terdaftar (tambah) atau dipakai prospek lain (ubah); tidak ada perubahan; prospek sudah diarsipkan; HP bukan pola dummy |
-| POST /draf/kirim (E1) | id\_draf, oleh (staf) | status ok, status\_draf Terkirim (simulasi), no\_tujuan (nomor dummy), pesan | Bukan staf; draf bukan Siap kirim (simulasi); prospek diarsipkan atau tanpa nomor HP dummy |
+| POST /tiket (E1, Opsi B) | id\_tiket, aksi (ambil, jawab, atau selesai), oleh (staf); jawab: jawaban; selesai: catatan | status ok, id\_tiket, status\_tiket, pesan; jawab: id\_draf (draf baru Menunggu persetujuan, kolom catatan “Jawaban staf atas Txxxx”) | Bukan staf; tiket tidak ada atau sudah Selesai; ambil bukan dari Baru; selesai tanpa catatan; jawab tanpa isi atau tiket sudah punya draf jawaban yang belum Ditolak |
+| POST /draf/kirim (E1) | id\_draf, oleh (staf) | status ok, status\_draf Terkirim (simulasi), no\_tujuan (nomor dummy), tiket\_selesai (id tiket yang ditutup otomatis bila draf adalah jawaban staf, atau null), pesan | Bukan staf; draf bukan Siap kirim (simulasi); prospek diarsipkan atau tanpa nomor HP dummy |
 | POST /pengingat | (kosong) | status ok, daftar prospek yang ditandai, jumlah sel berubah | — |
 
 ### Aturan keandalan
@@ -561,6 +562,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Selesai otomatis (run_tests 37/37, jsdom, tangkapan layar Edge, 7 Nov 2026); uji peramban T-40, T-41, T-43 oleh kandidat |
 | EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Selesai otomatis (run_tests 37/37, jsdom, tangkapan layar Edge, 7 Nov 2026); uji peramban T-40, T-41, T-43 oleh kandidat |
 | EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
+| EB-07 | E1 | Siklus tiket eskalasi (Opsi B): POST /tiket (ambil, jawab lewat draf, selesai), tutup otomatis saat draf jawaban terkirim, kolom Status dan Usia serta tindakan di Panel Staf | CC | Tiket bisa diambil, dijawab, dan diselesaikan; jawaban mengikuti alur persetujuan; Histori ubah\_tiket tercatat | US layanan, FR-04 | Dibangun; uji unit dan live lulus (7 Nov 2026) |
 
 ### Definition of Done untuk setiap item
 
@@ -648,6 +650,8 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-42 | E1 Formulir | Chat sebagai “PT Simulasi Chat Dulu” (prospek tanpa PIC), lalu daftar sebagai “PT. Chat Dulu”, lalu kirim ulang | Tetap satu baris; sektor, nama\_pic, no\_hp\_pic, kategori yang kosong terisi (tidak menimpa isi lama); empat Histori ubah\_peserta; kirim ulang berulang tanpa baris baru | O | E-01, FR-08 | Lulus (7 Nov 2026, run_tests.py): P14 dari chat; sektor, nama\_pic, no\_hp\_pic, kategori dilengkapi; Histori ubah\_peserta 4; Prospek tetap 14; kirim ulang berulang |
 | T-43 | E1 Asisten | Di peramban klik “Tanya Asisten” di pojok kanan bawah: sebut nama perusahaan, pilih saran “Apakah pendaftaran dipungut biaya?”, tanyakan “Bisakah dijamin mendapat bintang 5?”, matikan n8n lalu kirim pertanyaan dan tekan Coba ulang, tekan Esc | Bubble membuka dan menutup; jawaban membawa chip KB01 dan label Diteruskan ke staf; kegagalan tampil merah dengan Coba ulang (id sama, tanpa data ganda); tidak ada kata “simulasi” | M | FR-01, FR-03, FR-04, FR-16 | Belum diuji di peramban (perilaku sudah diperiksa di jsdom, 7 Nov 2026) |
 | T-44 | E1 Panel | Di Panel Staf: klik kartu Siap kirim, buka draf prospek tanpa No. HP, klik Lengkapi di Tabel Peserta, isi data lalu kembali dan kirim | Peringatan dan tombol Kirim nonaktif; tautan membuka modal ubah prospek itu; setelah dilengkapi tombol Kirim ke nomor aktif dan draf pindah ke Terkirim | M | E-02, E-03 | Perilaku diperiksa di jsdom (7 Nov 2026); tampilan belum diuji di peramban |
+| T-45 | E1 Tiket | Jawab tiket Baru milik P03 lewat draf, jawab lagi, setujui, tandai siap kirim, kirim | Draf jawaban dibuat; jawab ganda 400; kirim menutup tiket otomatis; dua Histori ubah\_tiket | O | FR-04, EB-07 | Belum dijalankan lewat run\_tests.py (cek live setara lulus, 7 Nov 2026) |
+| T-46 | E1 Tiket | Ambil, ambil lagi, selesai tanpa catatan, selesai, ubah setelah selesai, peran admin | 200, 400, 400, 200, 400, 400; tiket hilang dari antrean | O | FR-04, EB-07 | Belum dijalankan lewat run\_tests.py (cek live setara lulus, 7 Nov 2026) |
 
 ### Matriks keterlacakan
 

@@ -460,6 +460,46 @@ def main() -> None:
                               f"ke {r.get('no_tujuan')}; Histori kirim_simulasi {len(h)}", dt)
         jalankan("T-38", t38)
 
+        # --- Opsi B: siklus tiket eskalasi (POST /tiket) ---
+        def tiket_baru():
+            _, p, _ = api("GET", "/panel?peran=staf")
+            return [x for x in p.get("antrean", []) if x["status"] == "Baru" and x["id_prospek"] == "P03"]
+
+        def t45():
+            t = tiket_baru()
+            if not t:
+                raise RuntimeError("butuh tiket Baru milik P03 (dari T-02/T-03)")
+            idt = t[0]["id_tiket"]
+            k, r, dt = api("POST", "/tiket", {"id_tiket": idt, "aksi": "jawab", "oleh": "staf", "jawaban": "Penghargaan tidak dapat dijamin; penilaian dilakukan juri."})
+            idd = r.get("id_draf")
+            k2, _, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "jawab", "oleh": "staf", "jawaban": "x"})
+            for kep in ("setuju", "siap_kirim"):
+                api("POST", "/approve", {"id_draf": idd, "keputusan": kep, "catatan": "", "oleh": "staf"})
+            k3, r3, _ = api("POST", "/draf/kirim", {"id_draf": idd, "oleh": "staf"})
+            d = data()
+            st = next(x for x in d["Antrean_Staf"] if x["id_tiket"] == idt)["status"]
+            h = [x for x in d["Histori"] if x["jenis"] == "ubah_tiket" and x["catatan"].startswith(idt)]
+            ok = k == 200 and k2 == 400 and k3 == 200 and r3.get("tiket_selesai") == idt and st == "Selesai" and len(h) == 2
+            catat("T-45", ok, f"{idt} dijawab lewat {idd}; jawab ganda HTTP {k2}; kirim menutup tiket: {r3.get('tiket_selesai')}; status {st}; Histori ubah_tiket {len(h)}", dt)
+        jalankan("T-45", t45)
+
+        def t46():
+            t = tiket_baru()
+            if not t:
+                raise RuntimeError("butuh tiket Baru kedua milik P03")
+            idt = t[0]["id_tiket"]
+            k1, r1, dt = api("POST", "/tiket", {"id_tiket": idt, "aksi": "ambil", "oleh": "staf"})
+            k2, _, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "ambil", "oleh": "staf"})
+            k3, _, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "selesai", "oleh": "staf"})
+            k4, r4, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "selesai", "oleh": "staf", "catatan": "Dijawab lewat telepon"})
+            k5, _, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "ambil", "oleh": "staf"})
+            k6, _, _ = api("POST", "/tiket", {"id_tiket": idt, "aksi": "ambil", "oleh": "admin"})
+            _, p, _ = api("GET", "/panel?peran=staf")
+            hilang = not any(x["id_tiket"] == idt for x in p.get("antrean", []))
+            ok = (k1, k2, k3, k4, k5, k6) == (200, 400, 400, 200, 400, 400) and r1.get("status_tiket") == "Ditangani" and r4.get("status_tiket") == "Selesai" and hilang
+            catat("T-46", ok, f"{idt}: ambil {k1}, ambil ulang {k2}, selesai tanpa catatan {k3}, selesai {k4}, ubah setelah selesai {k5}, peran admin {k6}; hilang dari antrean: {hilang}", dt)
+        jalankan("T-46", t46)
+
         def t39():
             pola = r"wa\.me|api\.whatsapp|href=[\"']?(tel|sms):|gmail\.googleapis|n8n-nodes-base\.(gmail|emailSend|whatsApp|twilio|telegram|slack)"
             grep = subprocess.run(["git", "grep", "-nIE", pola, "--", "n8n", "web"], cwd=ROOT, capture_output=True, text=True)

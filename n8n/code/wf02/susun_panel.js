@@ -37,8 +37,14 @@ const antrean = T.Antrean_Staf.filter((t) => String(t.status).trim() !== 'Selesa
       pertanyaan: c.pertanyaan || '',
       jawaban: c.jawaban || '',
       alasan: t.alasan,
-      status: t.status,
+      status: String(t.status || '').trim() || 'Baru',
+      ditangani_oleh: t.ditangani_oleh || '',
       waktu: t.waktu,
+      // Opsi B: draf jawaban staf yang masih hidup untuk tiket ini (bila ada).
+      draf_jawaban: (function () {
+        const dj = T.Draf.filter((d) => tiketDariDraf(d) === t.id_tiket && String(d.status).trim() !== 'Ditolak').pop();
+        return dj ? { id_draf: dj.id_draf, status: dj.status } : null;
+      })(),
     };
   })
   .filter((t) => idTerlihat.has(t.id_prospek));
@@ -53,6 +59,9 @@ const daftarDraf = (status) =>
         nama_perusahaan: namaProspek[d.id_prospek] || '',
         no_hp_pic: hpProspek[d.id_prospek] || '', // E-03: tujuan tombol Kirim (simulasi), nomor dummy
         id_percakapan: d.id_percakapan || '',
+        // Sumber draf: chat (follow-up AI), catatan_ae (draf penawaran AE), atau jawaban_staf (jawaban atas tiket).
+        sumber: tiketDariDraf(d) ? 'jawaban_staf' : d.id_percakapan ? 'chat' : 'catatan_ae',
+        id_tiket: tiketDariDraf(d) || '',
         pertanyaan: c.pertanyaan || '',
         isi_draf: d.isi_draf,
         catatan: d.catatan || '',

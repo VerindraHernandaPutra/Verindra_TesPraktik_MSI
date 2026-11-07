@@ -210,12 +210,20 @@ function prosesKirim(D, m, waktu) {
     nilai_baru: ke,
     catatan: `${m.id_draf}; tujuan ${hp}`,
   };
+  // Opsi B: bila draf ini jawaban staf atas tiket eskalasi, tiket ditutup dalam batch yang sama (aturan_tiket.js).
+  const tutup = typeof tutupTiketSaatTerkirim === 'function'
+    ? tutupTiketSaatTerkirim(D, draf, aktor, waktu, nomorBerikut(D.tabel.Histori, 'id_histori') + 1)
+    : null;
+  const historiBaru = tutup ? [h, tutup.histori] : [h];
   return {
     boleh: true,
-    body_tulis: { requests: [...ubahSel(D, 'Draf', draf, { status: ke }), tambahBaris(D, 'Histori', [h])] },
+    body_tulis: {
+      requests: [...ubahSel(D, 'Draf', draf, { status: ke }), ...(tutup ? tutup.requests : []), tambahBaris(D, 'Histori', historiBaru)],
+    },
     respons: {
       status: 'ok', id_draf: m.id_draf, status_draf: ke, no_tujuan: hp,
-      pesan: `Draf ${m.id_draf} ditandai terkirim ke ${hp}.`,
+      tiket_selesai: tutup ? tiketDariDraf(draf) : null,
+      pesan: `Draf ${m.id_draf} ditandai terkirim ke ${hp}.` + (tutup ? ` Tiket ${tiketDariDraf(draf)} ditandai selesai.` : ''),
     },
   };
 }

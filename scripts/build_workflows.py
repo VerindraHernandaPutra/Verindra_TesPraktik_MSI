@@ -431,7 +431,7 @@ def bangun_wf02(env) -> dict:
                               sheets=sheets, tulis=False, ls=[
         langkah("Validasi Panel", teks("n8n/code/wf02/validasi_peran.js"), masukan="Terima Panel", berhenti=TOLAK_VALID),
         langkah("Olah Sheet Panel", kode_olah(sheets), masukan="input"),
-        langkah("Susun Panel", gabung("n8n/code/sheet_tulis.js", "n8n/code/wf02/susun_panel.js")),
+        langkah("Susun Panel", gabung("n8n/code/sheet_tulis.js", "n8n/code/aturan_tiket.js", "n8n/code/wf02/susun_panel.js")),
     ])
     r.selesaikan(nodes)
     return workflow_dasar("WF-02 Data panel", nodes, koneksi)
@@ -630,17 +630,25 @@ def bangun_wf06(env) -> dict:
         langkah("Olah Sheet Peserta", kode_olah(sp), masukan="input"),
         langkah("Proses Peserta", gabung(*aturan_peserta, "n8n/code/wf06/proses_peserta.js"), berhenti=TOLAK_ATAU_LAMA),
     ])
-    sk = ["Draf", "Prospek", "Histori", "Log_Error"]
+    sk = ["Draf", "Prospek", "Histori", "Antrean_Staf", "Log_Error"]
+    aturan_kirim = (*aturan_peserta, "n8n/code/aturan_tiket.js")
     n3, k3 = endpoint(r, env, y=1900, akhiran="Kirim Draf", workflow=wf, metode="POST", path="draf/kirim", sheets=sk, tulis=True, ls=[
-        langkah("Validasi Kirim", gabung(*aturan_peserta, "n8n/code/wf06/validasi_kirim.js"),
+        langkah("Validasi Kirim", gabung(*aturan_kirim, "n8n/code/wf06/validasi_kirim.js"),
                 masukan="Terima Kirim Draf", berhenti=TOLAK_VALID),
         langkah("Olah Sheet Kirim", kode_olah(sk), masukan="input"),
-        langkah("Proses Kirim", gabung(*aturan_peserta, "n8n/code/wf06/proses_kirim.js"), berhenti=TOLAK_BOLEH),
+        langkah("Proses Kirim", gabung(*aturan_kirim, "n8n/code/wf06/proses_kirim.js"), berhenti=TOLAK_BOLEH),
     ])
-    nodes += n2 + n3
+    st = ["Antrean_Staf", "Percakapan", "Draf", "Histori", "Log_Error"]
+    aturan_tiket = ("n8n/code/sheet_tulis.js", "n8n/code/aturan_tiket.js")
+    n4, k4 = endpoint(r, env, y=2500, akhiran="Tiket", workflow=wf, metode="POST", path="tiket", sheets=st, tulis=True, ls=[
+        langkah("Validasi Tiket", gabung(*aturan_tiket, "n8n/code/wf06/validasi_tiket.js"), masukan="Terima Tiket", berhenti=TOLAK_VALID),
+        langkah("Olah Sheet Tiket", kode_olah(st), masukan="input"),
+        langkah("Proses Tiket", gabung(*aturan_tiket, "n8n/code/wf06/proses_tiket.js"), berhenti=TOLAK_BOLEH),
+    ])
+    nodes += n2 + n3 + n4
     r.selesaikan(nodes)
     koneksi = [
-        *k2, *k3,
+        *k2, *k3, *k4,
         ("Terima Pendaftaran", 0, "Baca Sheet Pendaftaran"), ("Baca Sheet Pendaftaran", 0, "Proses Pendaftaran"),
         ("Proses Pendaftaran", 0, "Tulis Pendaftaran?"), ("Tulis Pendaftaran?", 0, "Tulis Pendaftaran"),
         ("Tulis Pendaftaran?", 1, "Berulang?"), ("Berulang?", 0, "Ada Pertanyaan Awal?"),
