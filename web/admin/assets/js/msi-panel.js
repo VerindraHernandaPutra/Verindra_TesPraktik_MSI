@@ -53,31 +53,52 @@
     if (t !== 'display') return d.no_hp_pic || '';
     return d.no_hp_pic ? M.esc(d.no_hp_pic) : '<span class="badge bg-soft-danger text-danger">Belum ada</span>';
   }
-  function aksi() { return '<span class="fs-12 text-muted">Buka</span> <i class="feather feather-chevron-right"></i>'; }
+  // Aksi cepat per baris (gaya ikon aksi tabel template). Aksi yang butuh isian membuka modal di mode yang sesuai.
+  function ikonAksi(aksi, ikon, judul) {
+    return '<a href="javascript:void(0)" class="avatar-text avatar-md aksi-cepat" data-aksi="' + aksi + '" title="' + judul +
+      '" aria-label="' + judul + '"><i class="feather ' + ikon + '"></i></a>';
+  }
+  function aksiKolom(jenis) {
+    return function (v, t, d) {
+      if (t !== 'display') return '';
+      var a = [];
+      if (jenis === 'antrean') {
+        if (d.status === 'Baru') a.push(ikonAksi('ambil', 'feather-user-check', 'Ambil tiket'));
+        if (!d.draf_jawaban) a.push(ikonAksi('jawab', 'feather-edit-3', 'Jawab lewat draf'));
+        a.push(ikonAksi('selesai', 'feather-check-circle', 'Tandai selesai'));
+      } else if (jenis === 'menunggu') {
+        a.push(ikonAksi('setuju', 'feather-check', 'Setujui'), ikonAksi('tolak', 'feather-x', 'Tolak (perlu catatan)'));
+      } else if (jenis === 'disetujui') {
+        a.push(ikonAksi('siap', 'feather-flag', 'Tandai siap kirim'));
+      } else if (jenis === 'siap') {
+        a.push(d.no_hp_pic ? ikonAksi('kirim', 'feather-send', 'Kirim ke ' + M.esc(d.no_hp_pic)) : ikonAksi('lengkapi', 'feather-user-plus', 'Lengkapi No. HP di Tabel Peserta'));
+      }
+      a.push(ikonAksi('detail', 'feather-eye', 'Lihat detail'));
+      return '<div class="hstack gap-2 justify-content-end">' + a.join('') + '</div>';
+    };
+  }
 
   var KOLOM = {
     antrean: [
       { title: 'Tiket', data: 'id_tiket' },
       { title: 'Perusahaan', data: 'nama_perusahaan', render: perusahaan },
-      { title: 'Pertanyaan', data: 'pertanyaan', render: teksSaja('pertanyaan', 90) },
-      { title: 'Alasan', data: 'alasan', render: teksSaja('alasan', 60) },
+      { title: 'Pertanyaan', data: 'pertanyaan', render: teksSaja('pertanyaan', 55) },
       { title: 'Status', data: 'status', render: statusTiket },
       { title: 'Usia', data: 'waktu', render: function (v, t) { return t === 'display' ? M.esc(usia(v)) : v; } },
-      { title: '', data: null, orderable: false, searchable: false, className: 'text-end', render: aksi },
     ],
     draf: [
       { title: 'Draf', data: 'id_draf' },
       { title: 'Perusahaan', data: 'nama_perusahaan', render: perusahaan },
-      { title: 'Isi draf', data: 'isi_draf', render: teksSaja('isi_draf', 100) },
+      { title: 'Isi draf', data: 'isi_draf', render: teksSaja('isi_draf', 70) },
       { title: 'Sumber', data: 'id_percakapan', render: sumber },
       { title: 'Dibuat', data: 'dibuat', render: waktu('dibuat') },
-      { title: '', data: null, orderable: false, searchable: false, className: 'text-end', render: aksi },
     ],
   };
   var KOLOM_SIAP = KOLOM.draf.slice(0, 4).concat([{ title: 'No. HP', data: 'no_hp_pic', render: hp }], KOLOM.draf.slice(4));
 
   function mulaiTabel(jenis) {
-    var kolom = jenis === 'antrean' ? KOLOM.antrean : jenis === 'siap' ? KOLOM_SIAP : KOLOM.draf;
+    var kolom = (jenis === 'antrean' ? KOLOM.antrean : jenis === 'siap' ? KOLOM_SIAP : KOLOM.draf)
+      .concat([{ title: 'Aksi', data: null, orderable: false, searchable: false, className: 'text-end text-nowrap', render: aksiKolom(jenis) }]);
     tabel[jenis] = $('#tabel-' + jenis).DataTable({
       data: data[jenis],
       columns: kolom,
@@ -89,12 +110,34 @@
         infoFiltered: '(disaring dari _MAX_)', zeroRecords: 'Tidak ada yang cocok.', emptyTable: 'Belum ada data pada tab ini.',
         paginate: { previous: 'Sebelumnya', next: 'Berikutnya' },
       },
+      autoWidth: false,
       createdRow: function (baris) { baris.style.cursor = 'pointer'; },
+    });
+    $('#tabel-' + jenis + ' tbody').on('click', 'a.aksi-cepat', function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // jangan ikut membuka detail lewat klik baris
+      var d = tabel[jenis].row($(this).closest('tr')).data();
+      if (d) aksiCepat(jenis, d, this.dataset.aksi, this);
     });
     $('#tabel-' + jenis + ' tbody').on('click', 'tr', function () {
       var d = tabel[jenis].row(this).data();
       if (d) bukaDetail(jenis, d);
     });
+  }
+
+  function aksiCepat(jenis, d, aksi, a) {
+    if (aksi === 'detail') return bukaDetail(jenis, d);
+    if (aksi === 'jawab' || aksi === 'selesai' || aksi === 'tolak') return bukaDetail(jenis, d, aksi);
+    if (aksi === 'lengkapi') { window.location.href = 'index.html?lengkapi=' + encodeURIComponent(d.id_prospek); return; }
+    // Penanda sibuk untuk ikon tautan (pengganti atribut disabled pada tombol).
+    var t = { set disabled(v) { a.classList.toggle('disabled', v); a.style.pointerEvents = v ? 'none' : ''; a.style.opacity = v ? '0.5' : ''; } };
+    if (aksi === 'ambil') return ubahTiket(t, d.id_tiket, 'ambil', {}, 'pesan-panel');
+    if (aksi === 'setuju') return putuskan(t, d.id_draf, 'setuju', '', 'pesan-panel');
+    if (aksi === 'siap') return putuskan(t, d.id_draf, 'siap_kirim', '', 'pesan-panel');
+    if (aksi === 'kirim') {
+      if (!window.confirm('Kirim draf ' + d.id_draf + ' ke ' + d.no_hp_pic + '?')) return;
+      return kirim(t, d, 'pesan-panel');
+    }
   }
 
   function kartuAngka(jenis, jumlah) {
@@ -129,7 +172,7 @@
     return t;
   }
 
-  function bukaDetail(jenis, d) {
+  function bukaDetail(jenis, d, modeAwal) {
     jenisDetail = jenis;
     itemDetail = d;
     var isi = el('isi-detail');
@@ -144,7 +187,7 @@
       isi.append(bagian('Perusahaan', nama), bagian('Pertanyaan', d.pertanyaan, 'bg-soft-dark rounded p-3'),
         bagian('Jawaban asisten', d.jawaban || '–'), bagian('Alasan eskalasi', d.alasan),
         bagian('Status', d.status + (d.ditangani_oleh ? ' oleh ' + d.ditangani_oleh : '') + ' · masuk ' + M.formatWaktu(d.waktu) + ' (' + usia(d.waktu) + ')'));
-      aksiTiket(d, isi, kaki);
+      aksiTiket(d, isi, kaki, modeAwal);
       modal('modal-detail').show();
       return;
     } else {
@@ -164,6 +207,10 @@
       catatan.placeholder = 'Catatan (wajib bila menolak)';
       catatan.setAttribute('aria-label', 'Catatan untuk ' + d.id_draf);
       isi.append(catatan);
+      if (modeAwal === 'tolak') {
+        M.pesan('pesan-detail', 'warning', 'Isi alasan penolakan, lalu tekan Tolak.');
+        saatTerbuka(function () { catatan.focus(); });
+      }
       kaki.append(tutup,
         tombol('Tolak', 'btn-light-brand', function (t) {
           if (!catatan.value.trim()) { catatan.focus(); return M.pesan('pesan-detail', 'danger', 'Isi catatan dulu sebelum menolak ' + d.id_draf + '.'); }
@@ -192,7 +239,11 @@
   }
 
   // Tindakan tiket (Opsi B): ambil, jawab lewat draf, tandai selesai. Semua lewat POST /tiket.
-  function aksiTiket(d, isi, kaki) {
+  function saatTerbuka(fn) {
+    el('modal-detail').addEventListener('shown.bs.modal', fn, { once: true });
+  }
+
+  function aksiTiket(d, isi, kaki, modeAwal) {
     var tutup = tombol('Tutup', 'btn-light-brand', function () { modal('modal-detail').hide(); });
     var formulir = buat('div', 'mt-2');
     var label = buat('label', 'form-label fw-semibold');
@@ -234,9 +285,17 @@
     }));
     tombolTombol.push(kirimForm);
     tombolTombol.forEach(function (b) { kaki.append(b); });
+    // Dibuka dari aksi cepat: langsung tampilkan kolom isian yang sesuai.
+    if (modeAwal === 'jawab' && !d.draf_jawaban) {
+      siapkan('jawab', 'Jawaban untuk calon peserta', 'Tulis jawaban staf; akan menjadi draf yang perlu disetujui sebelum dikirim.');
+      saatTerbuka(function () { kotak.focus(); });
+    } else if (modeAwal === 'selesai') {
+      siapkan('selesai', 'Catatan penyelesaian', 'Misalnya: sudah dijawab lewat telepon.');
+      saatTerbuka(function () { kotak.focus(); });
+    }
   }
 
-  async function ubahTiket(t, idTiket, aksi, tambahan) {
+  async function ubahTiket(t, idTiket, aksi, tambahan, wadah) {
     t.disabled = true;
     var r = await M.api('POST', '/tiket', Object.assign({ id_tiket: idTiket, aksi: aksi, oleh: 'staf' }, tambahan));
     if (r.ok) {
@@ -244,11 +303,11 @@
       M.pesan('pesan-panel', 'success', r.data.pesan);
       return muat(false);
     }
-    M.pesan('pesan-detail', 'danger', r.data.pesan || 'Tiket gagal diperbarui. Silakan coba ulang.');
+    M.pesan(wadah || 'pesan-detail', 'danger', r.data.pesan || 'Tiket gagal diperbarui. Silakan coba ulang.');
     t.disabled = false;
   }
 
-  async function putuskan(t, idDraf, keputusan, catatan) {
+  async function putuskan(t, idDraf, keputusan, catatan, wadah) {
     t.disabled = true;
     var r = await M.api('POST', '/approve', { id_draf: idDraf, keputusan: keputusan, catatan: catatan, oleh: 'staf' });
     if (r.ok) {
@@ -256,11 +315,11 @@
       M.pesan('pesan-panel', 'success', idDraf + ' sekarang berstatus "' + M.bersih(r.data.status_draf) + '".');
       return muat(false);
     }
-    M.pesan('pesan-detail', 'danger', r.data.pesan || 'Keputusan gagal diproses. Silakan coba ulang.');
+    M.pesan(wadah || 'pesan-detail', 'danger', r.data.pesan || 'Keputusan gagal diproses. Silakan coba ulang.');
     t.disabled = false;
   }
 
-  async function kirim(t, d) {
+  async function kirim(t, d, wadah) {
     t.disabled = true;
     var r = await M.api('POST', '/draf/kirim', { id_draf: d.id_draf, oleh: 'staf' });
     if (r.ok) {
@@ -268,7 +327,7 @@
       M.pesan('pesan-panel', 'success', r.data.pesan);
       return muat(false);
     }
-    M.pesan('pesan-detail', 'danger', r.data.pesan || 'Pengiriman gagal. Silakan coba ulang.');
+    M.pesan(wadah || 'pesan-detail', 'danger', r.data.pesan || 'Pengiriman gagal. Silakan coba ulang.');
     t.disabled = false;
   }
 
