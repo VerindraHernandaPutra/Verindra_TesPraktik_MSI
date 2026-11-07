@@ -15,7 +15,8 @@ const WAKTU = '2026-11-07T10:00:00+07:00';
 function dataSheet(histori = []) {
   const prospek = [
     { id_prospek: 'P01', nama_perusahaan: 'PT Simulasi Surya Reka', kunci_normal: 'surya reka', ae: 'AE A', aktif: 'TRUE' },
-    { id_prospek: 'P02', nama_perusahaan: 'PT Simulasi Laut Biru', kunci_normal: 'laut biru', ae: 'AE B', aktif: 'TRUE' },
+    { id_prospek: 'P02', nama_perusahaan: 'PT Simulasi Laut Biru', kunci_normal: 'laut biru', sektor: 'Logistik', ae: 'AE B',
+      nama_pic: 'Doni Saputra', no_hp_pic: '0812-0000-0002', kategori: 'CSR', aktif: 'TRUE' },
     { id_prospek: 'P03', nama_perusahaan: 'PT Simulasi Tani Makmur', kunci_normal: 'tani makmur', ae: 'AE A', aktif: 'FALSE' },
   ].map((r, i) => ({ ...r, _baris: i + 2 }));
   return {
@@ -80,7 +81,7 @@ test('perusahaan baru: P04 berikutnya, sumber formulir, aktif TRUE, Histori pend
   assert.equal(h.aksi, 'tulis');
   assert.deepEqual(h.respons, {
     status: 'ok', baru: true, id_prospek: 'P04', nama_perusahaan: 'PT Simulasi Contoh Baru',
-    pesan: 'Pendaftaran PT Simulasi Contoh Baru tercatat sebagai P04.', berulang: false,
+    pesan: 'Pendaftaran PT Simulasi Contoh Baru tercatat sebagai P04.', berulang: false, dilengkapi: [],
   });
   const [rp, rh] = h.body_tulis.requests;
   assert.equal(rp.appendCells.sheetId, 11);
@@ -143,4 +144,33 @@ test('pertanyaan awal diteruskan ke /chat dengan id_permintaan turunan dan ID pr
     perlu_chat: true,
     body_chat: { id_permintaan: 'daftar-1-awal', prospek: 'P04', pertanyaan: 'Apakah ada biaya?' },
   });
+});
+
+test('R1: daftar setelah chat melengkapi kolom kosong saja, satu Histori ubah_peserta per kolom', () => {
+  const D = dataSheet();
+  // P01 tercatat dari chat: tanpa sektor, PIC, HP, dan kategori. Isi P01 yang sudah ada tidak boleh ditimpa.
+  D.tabel.Prospek[0].sektor = 'Manufaktur';
+  const h = prosesPendaftaran(D, validasiPendaftaran({ ...BODY_SAH, nama_perusahaan: 'Surya Reka', sektor: 'Energi' }), WAKTU);
+  assert.equal(h.aksi, 'tulis');
+  assert.equal(h.respons.baru, false);
+  assert.equal(h.respons.id_prospek, 'P01');
+  assert.deepEqual(h.respons.dilengkapi, ['nama_pic', 'no_hp_pic', 'kategori']);
+  assert.match(h.respons.pesan, /sudah terdaftar sebagai P01.*dilengkapi/);
+  const ubah = h.body_tulis.requests.filter((r) => r.updateCells).map((r) => [
+    HEADER_PROSPEK[r.updateCells.range.startColumnIndex], r.updateCells.rows[0].values[0].userEnteredValue.stringValue]);
+  assert.deepEqual(ubah, [['nama_pic', 'Budi Santoso'], ['no_hp_pic', '0812-0000-0011'], ['kategori', 'CSR'], ['diubah', WAKTU]]);
+  assert.ok(h.body_tulis.requests.every((r) => r.updateCells || r.appendCells), 'tidak ada baris Prospek baru atau hapus');
+  const hist = h.body_tulis.requests.at(-1).appendCells.rows.map((r) => r.values.map((v) => v.userEnteredValue.stringValue));
+  assert.deepEqual(hist.map((r) => r[4]), ['ubah_peserta', 'ubah_peserta', 'ubah_peserta', 'duplikat_terdeteksi']);
+  assert.deepEqual(hist.map((r) => r[0]), ['H0001', 'H0002', 'H0003', 'H0004']);
+  assert.ok(hist.at(-1)[7].endsWith('; id_permintaan=daftar-1'));
+});
+
+test('R1: prospek lengkap tidak diubah; prospek arsip tidak dilengkapi', () => {
+  const lengkap = prosesPendaftaran(dataSheet(), validasiPendaftaran({ ...BODY_SAH, nama_perusahaan: 'Laut Biru', nama_pic: 'Orang Lain' }), WAKTU);
+  assert.deepEqual(lengkap.respons.dilengkapi, []);
+  assert.equal(lengkap.body_tulis.requests.length, 1);
+  const arsip = prosesPendaftaran(dataSheet(), validasiPendaftaran({ ...BODY_SAH, nama_perusahaan: 'Tani Makmur' }), WAKTU);
+  assert.deepEqual(arsip.respons.dilengkapi, []);
+  assert.equal(arsip.body_tulis.requests.length, 1);
 });

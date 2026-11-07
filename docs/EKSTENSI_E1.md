@@ -94,6 +94,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - Perubahan arah (7 Nov 2026, setelah melihat hasil sesi 5): situs dibuat seperti bisnis nyata. Situs publik (one-page, iklan Nusantara Awards 2026 + tanya asisten + formulir pendaftaran) di http://localhost:8000/; panel admin tanpa login di http://localhost:8000/admin/. Kata "simulasi" tidak ditampilkan di situs; centang formulir menjadi "Saya menyetujui ketentuan pendaftaran" (nama kolom kontrak setuju\_simulasi tidak berubah); AR-04 agent menjadi "asisten AI program awards". Halaman Chat pindah dari admin ke situs publik. Nilai status di sheet tetap "Siap kirim (simulasi)" dan "Terkirim (simulasi)" (Section 9); tampilan menyembunyikan "(simulasi)".
 
+- R1 (7 Nov 2026): bila perusahaan sudah tercatat (misalnya dari chat) lalu mendaftar, /pendaftaran tidak menambah baris tetapi melengkapi kolom yang masih kosong (sektor, nama\_pic, no\_hp\_pic, kategori) dengan Histori ubah\_peserta per kolom; isi lama tidak pernah ditimpa dan prospek arsip tidak diubah.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

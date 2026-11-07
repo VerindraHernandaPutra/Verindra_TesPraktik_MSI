@@ -460,7 +460,7 @@ Halaman web hanya berbicara dengan n8n lewat kontrak ini, jadi bagian depan dan 
 | POST /approve | id\_draf, keputusan (setuju, tolak, atau siap\_kirim), catatan (wajib untuk tolak), oleh | status ok, status\_draf baru | Setuju/tolak bukan dari Menunggu persetujuan; siap\_kirim bukan dari Disetujui; peran bukan staf |
 | POST /prospek/status | id\_prospek, status\_baru, oleh | status ok, isi Histori | Status di luar daftar Section 9; AE mengubah prospek milik AE lain |
 | POST /prospek/draf | id\_prospek, catatan, oleh | status ok, id\_draf, isi\_draf berstatus Menunggu persetujuan | Catatan kosong; AE meminta draf untuk prospek milik AE lain |
-| POST /pendaftaran (E1) | id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic (pola dummy 0812-0000-xxxx), kategori, pertanyaan (opsional), setuju\_simulasi = true | status ok, baru (true/false), id\_prospek, nama\_perusahaan, pesan (“… tercatat sebagai P12” atau “… sudah terdaftar sebagai P03; data tidak ditambah.”), berulang, chat (hasil POST /chat untuk pertanyaan awal dengan id\_permintaan + “-awal”, atau null) | Kolom wajib kosong, nomor HP bukan pola dummy, kategori di luar daftar, centang simulasi tidak dicentang; penulisan gagal → status gagal |
+| POST /pendaftaran (E1) | id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic (pola dummy 0812-0000-xxxx), kategori, pertanyaan (opsional), setuju\_simulasi = true | status ok, baru (true/false), id\_prospek, nama\_perusahaan, pesan (“… tercatat sebagai P12” atau “… sudah terdaftar sebagai P03; data tidak ditambah.”), berulang, dilengkapi (kolom kosong pada prospek lama yang diisi dari formulir: sektor, nama\_pic, no\_hp\_pic, kategori; tidak pernah menimpa isi lama), chat (hasil POST /chat untuk pertanyaan awal dengan id\_permintaan + “-awal”, atau null) | Kolom wajib kosong, nomor HP bukan pola dummy, kategori di luar daftar, centang simulasi tidak dicentang; penulisan gagal → status gagal |
 | POST /peserta (E1) | aksi (tambah, ubah, atau arsip), oleh (admin, ae\_a, ae\_b); tambah: id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae (opsional, admin); ubah: id\_prospek + kolom yang diubah (nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae khusus admin); arsip: id\_prospek; catatan opsional | status ok, aksi, id\_prospek, pesan; tambah: berulang; ubah: daftar kolom diubah | Peran staf; AE mengubah prospek AE lain; nama sudah terdaftar (tambah) atau dipakai prospek lain (ubah); tidak ada perubahan; prospek sudah diarsipkan; HP bukan pola dummy |
 | POST /draf/kirim (E1) | id\_draf, oleh (staf) | status ok, status\_draf Terkirim (simulasi), no\_tujuan (nomor dummy), pesan | Bukan staf; draf bukan Siap kirim (simulasi); prospek diarsipkan atau tanpa nomor HP dummy |
 | POST /pengingat | (kosong) | status ok, daftar prospek yang ditandai, jumlah sel berubah | — |
@@ -644,6 +644,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-39 | E1 Keamanan | Cari wa.me, tel:, sms:, dan node pengirim pesan di n8n/ dan web/ | Tidak ditemukan | O | E-03, NFR-02 | Lulus (7 Nov 2026, run_tests.py): tidak ada wa.me, tel:, sms:, atau node pengirim |
 | T-40 | E1 Formulir | Buka http://localhost:8000/ (bagian Daftar): kirim kosong, HP non-dummy, pendaftaran sah, nama yang sudah ada, matikan n8n lalu Coba ulang | Pesan Indonesia untuk tiap kasus; tidak ada kata “simulasi” di layar; tombol nonaktif saat memuat; Coba ulang tidak menggandakan data | M | E-01 | Belum diuji |
 | T-41 | E1 Peserta | Di peramban buka http://localhost:8000/admin/: Tabel Peserta (cari, filter status dan AE, tambah, ubah, arsip dengan konfirmasi), Chat, Panel Staf (Kirim (simulasi)), Dashboard, pada lebar laptop 1280 px | Tampilan mengikuti template; tidak ada kata “simulasi” di layar; pesan dalam Bahasa Indonesia; tidak ada galat di konsol | M | E-02, E-03 | Belum diuji |
+| T-42 | E1 Formulir | Chat sebagai “PT Simulasi Chat Dulu” (prospek tanpa PIC), lalu daftar sebagai “PT. Chat Dulu”, lalu kirim ulang | Tetap satu baris; sektor, nama\_pic, no\_hp\_pic, kategori yang kosong terisi (tidak menimpa isi lama); empat Histori ubah\_peserta; kirim ulang berulang tanpa baris baru | O | E-01, FR-08 | Belum dijalankan (uji penuh di sesi 6) |
 
 ### Matriks keterlacakan
 
@@ -671,7 +672,7 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-18 | Should | T-29 |
 | FR-19 | Could | T-25 |
 | FR-23 | Must | T-30 |
-| E-01 (E1) | Must | T-31, T-32, T-33, T-34, T-40 |
+| E-01 (E1) | Must | T-31, T-32, T-33, T-34, T-40, T-42 |
 | E-02 (E1) | Must | T-35, T-36, T-37, T-41 |
 | E-03 (E1) | Must | T-38, T-39, T-41 |
 

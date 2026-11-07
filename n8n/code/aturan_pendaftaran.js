@@ -70,7 +70,7 @@ function susunRespons(baru, p, berulang) {
     ? `Pendaftaran ${nama} tercatat sebagai ${p.id_prospek}.`
     : `${nama} sudah terdaftar sebagai ${p.id_prospek}; data tidak ditambah.`;
   if (!baru && String(p.aktif).trim().toUpperCase() === 'FALSE') pesan += ' Data ini sedang diarsipkan; hubungi admin.';
-  return { status: 'ok', baru, id_prospek: p.id_prospek, nama_perusahaan: nama, pesan, berulang };
+  return { status: 'ok', baru, id_prospek: p.id_prospek, nama_perusahaan: nama, pesan, berulang, dilengkapi: [] };
 }
 
 function susunTeruskan(m, idProspek) {
@@ -100,10 +100,27 @@ function prosesPendaftaran(D, m, waktu) {
   const idHistori = idBaru('H', nomorBerikut(D.tabel.Histori, 'id_histori'));
   const ada = daftar.find((r) => String(r.kunci_normal || '').trim() === kunci);
 
-  // FR-08 langkah 3: perusahaan sudah ada -> tidak menambah baris, hanya Histori duplikat_terdeteksi.
+  // FR-08 langkah 3: perusahaan sudah ada -> tidak menambah baris; Histori duplikat_terdeteksi.
+  // R1: prospek yang tercatat lebih dulu dari chat belum punya data PIC. Kolom yang MASIH KOSONG dilengkapi
+  // dari formulir (tidak pernah menimpa isi yang ada), satu Histori ubah_peserta per kolom; prospek arsip tidak diubah.
   if (ada) {
+    const isian = { sektor: m.sektor, nama_pic: m.nama_pic, no_hp_pic: m.no_hp_pic, kategori: m.kategori };
+    const lengkapi = pesertaAktif(ada)
+      ? Object.entries(isian).filter(([k, v]) => v && String(ada[k] ?? '').trim() === '' && (D.header.Prospek || []).includes(k))
+      : [];
+    let nomor = nomorBerikut(D.tabel.Histori, 'id_histori');
+    const historiLengkapi = lengkapi.map(([k, v]) => ({
+      id_histori: idBaru('H', nomor++),
+      waktu,
+      id_prospek: ada.id_prospek,
+      aktor: AKTOR_FORMULIR,
+      jenis: 'ubah_peserta',
+      nilai_lama: '',
+      nilai_baru: v,
+      catatan: `Kolom ${k} dilengkapi dari formulir pendaftaran`,
+    }));
     const histori = {
-      id_histori: idHistori,
+      id_histori: idBaru('H', nomor++),
       waktu,
       id_prospek: ada.id_prospek,
       aktor: AKTOR_FORMULIR,
@@ -112,10 +129,16 @@ function prosesPendaftaran(D, m, waktu) {
       nilai_baru: '',
       catatan: `Pendaftaran untuk perusahaan yang sudah terdaftar; nama masuk: "${m.nama_perusahaan}"; ${tanda}`,
     };
+    const requests = lengkapi.length
+      ? [...ubahSel(D, 'Prospek', ada, { ...Object.fromEntries(lengkapi), diubah: waktu }), tambahBaris(D, 'Histori', [...historiLengkapi, histori])]
+      : [tambahBaris(D, 'Histori', [histori])];
+    const respons = susunRespons(false, ada, false);
+    respons.dilengkapi = lengkapi.map(([k]) => k);
+    if (lengkapi.length) respons.pesan = `${ada.nama_perusahaan} sudah terdaftar sebagai ${ada.id_prospek}. Data yang masih kosong telah dilengkapi.`;
     return {
       aksi: 'tulis',
-      body_tulis: { requests: [tambahBaris(D, 'Histori', [histori])] },
-      respons: susunRespons(false, ada, false),
+      body_tulis: { requests },
+      respons,
       teruskan: susunTeruskan(m, ada.id_prospek),
     };
   }

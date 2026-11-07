@@ -373,6 +373,25 @@ def main() -> None:
             catat("T-34", ok, f"{r.get('id_prospek')}; chat {c.get('status')} rujukan {c.get('rujukan_kb')}; Percakapan {len(perc)}", dt)
         jalankan("T-34", t34)
 
+        def t42():
+            # R1: perusahaan bertanya lewat chat dulu (prospek tanpa PIC), lalu mendaftar dengan nama yang sama.
+            nama = "PT Simulasi Chat Dulu"
+            k0, r0, _, _ = chat(nama, "Apakah pendaftaran dipungut biaya?")
+            sebelum = data()
+            k, r, dt, idp = daftar("PT. Chat Dulu", no_hp_pic="0812-0000-0042", kategori="Digital")
+            t = data()
+            p = next((x for x in t["Prospek"] if x["id_prospek"] == r0.get("id_prospek")), {})
+            ub = [x for x in t["Histori"] if x["jenis"] == "ubah_peserta" and x["id_prospek"] == p.get("id_prospek")]
+            k2, r2, _, _ = daftar("PT. Chat Dulu", idp, no_hp_pic="0812-0000-0042", kategori="Digital")
+            sama = hitung(t) == hitung(data())
+            ok = (k0 == 200 and k == 200 and r.get("baru") is False and r.get("id_prospek") == r0.get("id_prospek")
+                  and len(t["Prospek"]) == len(sebelum["Prospek"]) and p.get("sumber") == "chat"
+                  and p.get("nama_pic") == "Budi Santoso" and p.get("no_hp_pic") == "0812-0000-0042" and p.get("kategori") == "Digital"
+                  and len(ub) == 4 and r2.get("berulang") is True and sama)
+            catat("T-42", ok, f"{p.get('id_prospek')} dari chat; dilengkapi {r.get('dilengkapi')}; Histori ubah_peserta {len(ub)}; "
+                              f"Prospek tetap {len(t['Prospek'])}; kirim ulang berulang={r2.get('berulang')}, tanpa baris baru: {sama}", dt)
+        jalankan("T-42", t42)
+
         # --- Ekstensi E1: tabel peserta POST /peserta dan Kirim (simulasi) POST /draf/kirim (setelah T-17) ---
         def peserta(**body):
             return api("POST", "/peserta", body)
