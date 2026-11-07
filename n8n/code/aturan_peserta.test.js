@@ -49,7 +49,7 @@ test('validasi peserta: aksi, peran, kolom, dan hak AE', () => {
   assert.equal(validasiPeserta(TAMBAH).valid, true);
   assert.match(validasiPeserta({ ...TAMBAH, aksi: 'hapus' }).pesan, /tambah, ubah, atau arsip/);
   assert.match(validasiPeserta({ ...TAMBAH, oleh: 'staf' }).pesan, /admin atau AE/);
-  assert.match(validasiPeserta({ ...TAMBAH, no_hp_pic: '081234567890' }).pesan, /pola dummy/);
+  assert.match(validasiPeserta({ ...TAMBAH, no_hp_pic: '081234567890' }).pesan, /Nomor HP PIC tidak valid/);
   assert.match(validasiPeserta({ ...TAMBAH, oleh: 'ae_a', ae: 'AE B' }).pesan, /Hanya admin yang boleh menentukan AE/);
   assert.match(validasiPeserta({ aksi: 'ubah', oleh: 'admin', id_prospek: 'P01' }).pesan, /Tidak ada kolom/);
   assert.match(validasiPeserta({ aksi: 'arsip', oleh: 'admin', id_prospek: 'x' }).pesan, /id_prospek tidak valid/);
@@ -141,7 +141,7 @@ test('kirim (simulasi): hanya staf, hanya dari Siap kirim (simulasi), nomor dumm
   assert.equal(HEADER.Draf[upd.range.startColumnIndex], 'status');
   const [hi] = sebagaiObjek('Histori', ok.body_tulis.requests[1]);
   assert.deepEqual([hi.jenis, hi.aktor, hi.nilai_lama, hi.nilai_baru], ['kirim_simulasi', 'Staf', 'Siap kirim (simulasi)', 'Terkirim (simulasi)']);
-  assert.match(hi.catatan, /0812-0000-0001.*tidak ada pesan yang dikirim/);
+  assert.match(hi.catatan, /tujuan 0812-0000-0001/);
 
   assert.match(kirim('D0002').pesan, /berstatus "Disetujui"; hanya draf Siap kirim/);
   assert.match(kirim('D0003').pesan, /sudah diarsipkan/);

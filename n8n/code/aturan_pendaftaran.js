@@ -41,10 +41,10 @@ function validasiPendaftaran(body) {
   else if (data.sektor.length > 60) pesan.push('Sektor maksimal 60 karakter.');
   if (!data.nama_pic) pesan.push('Nama PIC wajib diisi.');
   else if (data.nama_pic.length > 80) pesan.push('Nama PIC maksimal 80 karakter.');
-  if (!data.no_hp_pic) pesan.push('Nomor HP PIC harus memakai pola dummy 0812-0000-xxxx (simulasi, bukan nomor sungguhan).');
+  if (!data.no_hp_pic) pesan.push('Nomor HP PIC tidak valid. Gunakan format 0812-0000-xxxx.');
   if (!KATEGORI_E1.includes(data.kategori)) pesan.push(`Kategori tidak valid. Pilih salah satu: ${KATEGORI_E1.join(', ')}.`);
   if (data.pertanyaan.length > 500) pesan.push('Pertanyaan awal maksimal 500 karakter.');
-  if (!data.setuju_simulasi) pesan.push('Centang "Saya memahami ini formulir simulasi" untuk melanjutkan.');
+  if (!data.setuju_simulasi) pesan.push('Centang persetujuan ketentuan pendaftaran untuk melanjutkan.');
 
   return { valid: pesan.length === 0, pesan: pesan.join(' '), ...data };
 }

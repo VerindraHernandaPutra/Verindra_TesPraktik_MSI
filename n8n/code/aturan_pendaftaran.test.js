@@ -61,9 +61,9 @@ test('validasi: kolom wajib, kategori, nomor sungguhan, dan centang simulasi dit
     [{ nama_perusahaan: 'P03' }, 'bukan ID prospek'],
     [{ sektor: ' ' }, 'Sektor wajib'],
     [{ nama_pic: '' }, 'Nama PIC wajib'],
-    [{ no_hp_pic: '081298765432' }, 'pola dummy'],
+    [{ no_hp_pic: '081298765432' }, 'Nomor HP PIC tidak valid'],
     [{ kategori: 'Lainnya' }, 'Kategori tidak valid'],
-    [{ setuju_simulasi: false }, 'formulir simulasi'],
+    [{ setuju_simulasi: false }, 'persetujuan ketentuan'],
     [{ pertanyaan: 'x'.repeat(501) }, 'maksimal 500'],
   ];
   for (const [ubah, potongan] of kasus) {

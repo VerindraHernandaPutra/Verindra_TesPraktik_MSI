@@ -11,7 +11,7 @@ const DAFTAR_AE = ['AE A', 'AE B'];
 function periksaKolomPeserta(k, v, oleh) {
   if (k === 'no_hp_pic') {
     const hp = normalisasiHpDummy(v);
-    return [hp, hp ? '' : 'Nomor HP PIC harus memakai pola dummy 0812-0000-xxxx (simulasi, bukan nomor sungguhan).'];
+    return [hp, hp ? '' : 'Nomor HP PIC tidak valid. Gunakan format 0812-0000-xxxx.'];
   }
   const s = teksRapi(v);
   if (k === 'nama_perusahaan') {
@@ -208,14 +208,14 @@ function prosesKirim(D, m, waktu) {
     jenis: 'kirim_simulasi',
     nilai_lama: statusLama,
     nilai_baru: ke,
-    catatan: `${m.id_draf}; tujuan ${hp} (simulasi, tidak ada pesan yang dikirim)`,
+    catatan: `${m.id_draf}; tujuan ${hp}`,
   };
   return {
     boleh: true,
     body_tulis: { requests: [...ubahSel(D, 'Draf', draf, { status: ke }), tambahBaris(D, 'Histori', [h])] },
     respons: {
       status: 'ok', id_draf: m.id_draf, status_draf: ke, no_tujuan: hp,
-      pesan: `Draf ${m.id_draf} ditandai ${ke} ke ${hp}. Tidak ada pesan yang benar-benar dikirim.`,
+      pesan: `Draf ${m.id_draf} ditandai terkirim ke ${hp}.`,
     },
   };
 }

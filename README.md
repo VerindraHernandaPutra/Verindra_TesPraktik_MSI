@@ -11,7 +11,7 @@ Rencana lengkap: [docs/PERENCANAAN.md](docs/PERENCANAAN.md).
 docs/       Dokumen perencanaan dan panduan staf
 seed/       Data awal CSV, satu file per sheet Google Spreadsheet
 n8n/        Workflow JSON (workflows/), system prompt (prompts/), kode Code node (code/)
-web/        Halaman admin (templates/admin: tabel peserta, chat, panel staf, dashboard), formulir pendaftaran (templates/onepage), config.js
+web/        Situs publik (index.html, template Eventify) dan panel admin (admin/, template Duralux), config.js
 scripts/    Script Python: uji otomatis dan reset seed
 ```
 
@@ -49,7 +49,7 @@ scripts/    Script Python: uji otomatis dan reset seed
    cd web
    python -m http.server 8000 --bind 127.0.0.1
    ```
-   Buka **http://localhost:8000** (otomatis ke tabel peserta; formulir pendaftaran di `/templates/onepage/pendaftaran.html`) (bukan `127.0.0.1:8000` dan bukan membuka file langsung: webhook hanya
+   Buka **http://localhost:8000** (situs publik; panel admin di `/admin/`, tanpa login) (bukan `127.0.0.1:8000` dan bukan membuka file langsung: webhook hanya
    mengizinkan origin `WEB_ORIGIN` di `.env`). Alamat n8n diatur di `web/config.js`.
 7. **Jalankan uji otomatis.** Uji dimulai dengan reset seed (semua data demo ditulis ulang dari `seed/`):
    ```

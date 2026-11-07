@@ -334,7 +334,7 @@ def main() -> None:
             sebelum = hitung(data())
             k, r, dt, _ = daftar("PT Simulasi Nomor Asli", no_hp_pic="081234567890")
             k2, r2, _, _ = daftar("PT Simulasi Tanpa Centang", setuju_simulasi=False)
-            ok = k == 400 and "pola dummy" in r.get("pesan", "") and k2 == 400 and sebelum == hitung(data())
+            ok = k == 400 and "tidak valid" in r.get("pesan", "") and k2 == 400 and sebelum == hitung(data())
             catat("T-31", ok, f"HP non-dummy HTTP {k}; tanpa centang simulasi HTTP {k2}; data tidak berubah: {sebelum == hitung(data())}", dt)
         jalankan("T-31", t31)
 

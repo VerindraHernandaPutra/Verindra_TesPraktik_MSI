@@ -1,0 +1,20 @@
+/* Penyesuaian kecil formulir: dropdown nice-select mengikuti ukuran dan jarak kotak input bawaan template. */
+.contact-inner-section .contact4-boxarea .input-area .nice-select {
+  float: none;
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 16px;
+  padding: 16px 40px 16px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ztc-bg-bg-1);
+  color: var(--ztc-text-text-3);
+  font-family: var(--ztc-family-font2);
+  font-size: var(--ztc-font-size-font-s18);
+  font-weight: var(--ztc-weight-medium);
+  line-height: 18px;
+}
+.contact-inner-section .contact4-boxarea .input-area .nice-select.open,
+.contact-inner-section .contact4-boxarea .input-area .nice-select .current { color: var(--ztc-text-text-2); }
+.contact-inner-section .contact4-boxarea .input-area .nice-select .list { width: 100%; }
