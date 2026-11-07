@@ -4,3 +4,23 @@
 .nxl-header .header-wrapper { align-items: center; height: 80px; }
 .nxl-header .header-left, .nxl-header .header-right { align-items: center; }
 .nxl-header .nxl-navigation-toggle a { display: flex; align-items: center; height: 40px; }
+
+/* Tema hitam-kuning: aksen admin (tombol utama, tautan, penomoran halaman) menggantikan biru bawaan tema. */
+:root { --msi-emas: linear-gradient(135deg, #ffd84d 0%, #ffb800 55%, #e89a00 100%); --msi-emas-tua: #b07a00; }
+.btn-primary, .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+  background: var(--msi-emas);
+  border-color: #e89a00;
+  color: #141418;
+}
+.btn-primary:hover { filter: brightness(0.95); }
+.bg-primary { background-color: #ffb800 !important; color: #141418 !important; }
+.text-primary, a:hover { color: var(--msi-emas-tua) !important; }
+.table-responsive .dataTables_paginate .active > .page-link,
+.table-responsive .dataTables_paginate .page-item.active .page-link,
+ul.pagination-common-style li a.active { background-color: #ffb800; border-color: #ffb800; color: #141418; }
+.form-switch .form-check-input:checked, .custom-checkbox .custom-control-input:checked ~ .custom-control-label::before { background-color: #ffb800; border-color: #ffb800; }
+.nxl-navigation .nxl-navbar .nxl-item.active > .nxl-link { border-left: 3px solid #ffb800; }
+.nxl-navigation .nxl-navbar .nxl-item.active > .nxl-link .nxl-micon { color: var(--msi-emas-tua); }
+.nxl-header { border-bottom: 3px solid #ffb800; }
+.btn-primary, .btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary i { color: #141418 !important; }
+.pace .pace-progress { background: #ffb800; }

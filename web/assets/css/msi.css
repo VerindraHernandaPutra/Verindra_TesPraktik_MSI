@@ -200,3 +200,71 @@
 .cta4-section-area { margin-top: 70px; }
 .cta4-section-area .cta1-main-boxarea .timer-btn-area .heading-area { padding-right: 28px; }
 @media (max-width: 767px) { .cta4-section-area .cta1-main-boxarea .timer-btn-area .heading-area { padding: 0 0 16px; } }
+
+/* ===== Tema hitam-kuning bergradien: menimpa variabel warna template (biru dan navy) ===== */
+:root {
+  --ztc-bg-bg-8: #0c0c0e;
+  --ztc-bg-bg-9: #ffb800;
+  --ztc-text-text-11: #141418;
+  --msi-emas: linear-gradient(135deg, #ffd84d 0%, #ffb800 55%, #e89a00 100%);
+  --msi-hitam: linear-gradient(135deg, #09090b 0%, #16161b 55%, #2f2400 100%);
+  --msi-teks-gelap: #141418;
+}
+.vl-btn4 { background: var(--msi-emas); color: var(--msi-teks-gelap); }
+.vl-btn4:hover { color: var(--ztc-text-text-1); }
+
+/* Hero: latar hitam bergradien dengan teks terang. */
+.hero4-section-area { background: var(--msi-hitam); }
+.hero4-section-area .hero4-header h1 { color: #fff; }
+.hero4-section-area .hero4-header p { color: #d7d7de; }
+.hero4-section-area .hero4-header h5,
+.about4-section-area .about4-heading h5,
+.contact4-section-area .contact4-header h5 { background: rgba(255, 184, 0, 0.16); color: #ffb800; }
+.about4-section-area .about4-heading h5 { color: #9a6a00; background: #fff3cc; }
+.hero4-section-area .hero-content-images .content-area .date { color: var(--msi-teks-gelap); }
+
+/* Strip angka: emas bergradien dengan teks gelap. */
+.others4-section-area .others-bg { background: var(--msi-emas); }
+.others4-section-area .others-bg .heading-area h4 { color: var(--msi-teks-gelap); }
+.others4-section-area .others-bg .others-times-area .timer .time-box { background: rgba(12, 12, 14, 0.88); }
+.others4-section-area .others-bg .others-times-area .timer .time-value { color: #ffb800; }
+.others4-section-area .others-labels { color: var(--msi-teks-gelap); font-weight: 600; }
+
+/* Kategori dan tahapan: ikon gelap di atas emas. */
+.msi-timeline .titik { background: var(--msi-emas); color: var(--msi-teks-gelap); }
+.msi-timeline li:last-child .titik { background: var(--msi-hitam); color: #ffb800; }
+.msi-timeline li::before, .msi-timeline li:not(:last-child)::after { background: #ffb800; opacity: 0.5; }
+.msi-timeline .tahap { color: #9a6a00; }
+
+/* Blok formulir: hitam bergradien. */
+.contact4-section-area { background: var(--msi-hitam); }
+.contact4-section-area .contact4-boxarea { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 184, 0, 0.25); }
+.contact4-section-area .contact4-boxarea .input-area input,
+.contact4-section-area .contact4-boxarea .input-area textarea { border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.08); }
+.contact4-section-area .contact4-header .contact-author-box .icons { background: rgba(255, 184, 0, 0.16); }
+
+/* CTA: emas bergradien, tombol hitam. */
+.cta4-section-area .cta1-main-boxarea { background: var(--msi-emas); }
+.cta4-section-area .cta1-main-boxarea .text-white { color: var(--msi-teks-gelap) !important; }
+.cta4-section-area .cta1-main-boxarea ul li a { color: var(--msi-teks-gelap); background: rgba(12, 12, 14, 0.1); }
+.cta4-section-area .cta1-main-boxarea .vl-btn4 { background: #0c0c0e; color: #ffb800; }
+.cta4-section-area .cta1-main-boxarea .vl-btn4:hover { color: #0c0c0e; }
+.cta4-section-area .cta1-main-boxarea .vl-btn4::after { background: #fff; }
+.cta4-section-area .cta1-main-boxarea .timer-btn-area .heading-area { border-color: rgba(12, 12, 14, 0.35); }
+
+/* Footer: hitam. */
+.footer4-sertion-area { background: #0c0c0e; }
+.footer4-sertion-area .footer-logo-area p,
+.footer4-sertion-area .link-content ul li a,
+.footer4-sertion-area .copyright p { color: #c4c4cc; }
+.footer4-sertion-area .link-content h3 { color: #fff; }
+.footer4-sertion-area .link-content ul li a:hover { color: #ffb800; }
+
+/* Bubble asisten: emas dengan teks gelap. */
+.asisten-fab { background: var(--msi-emas); color: var(--msi-teks-gelap); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.asisten-kepala { background: var(--msi-hitam); }
+.asisten-kepala strong { color: #ffb800; }
+.asisten-baris.pengguna .asisten-gelembung { background: var(--msi-emas); color: var(--msi-teks-gelap); }
+.asisten-chip { background: #fff3cc; color: #7a5600; }
+.asisten-saran button { border-color: #e0a100; color: #7a5600; }
+.asisten-form button { background: var(--msi-emas); color: var(--msi-teks-gelap); }

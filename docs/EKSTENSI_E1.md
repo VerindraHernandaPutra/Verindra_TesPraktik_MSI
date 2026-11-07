@@ -104,6 +104,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - Penyempurnaan tampilan (7 Nov 2026): Kategori memakai kartu choose-widget template dengan ikon FontAwesome berbeda per kategori; Tahapan memakai garis waktu (komponen kecil di web/assets/css/msi.css, warna dan font template); jarak CTA diperbaiki; logo admin diperkecil dan header admin dirata-tengahkan (web/admin/assets/css/msi-admin.css).
 
+- Tema hitam-kuning (7 Nov 2026): situs publik memakai gradien hitam dan emas dengan menimpa variabel warna template di web/assets/css/msi.css (hero, formulir, dan footer hitam; strip angka dan CTA emas; tombol emas bergradien); admin hanya diberi aksen emas (tombol utama, penomoran halaman, garis header) di web/admin/assets/css/msi-admin.css agar tabel tetap terbaca. Bubble asisten menolak sapaan dan pertanyaan sebagai nama perusahaan.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

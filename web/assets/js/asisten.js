@@ -138,10 +138,27 @@
     kirim({ id_permintaan: 'tanya-' + id, prospek: perusahaan, pertanyaan: teks });
   }
 
+  // Sapaan, pertanyaan, dan teks terlalu pendek bukan nama perusahaan; jangan sampai tercatat sebagai prospek.
+  var KATA_BUKAN_NAMA = /^(halo|hai|hi|hello|hey|p|tes|test|ok|oke|ya|tidak|terima kasih|makasih|selamat (pagi|siang|sore|malam)|assalamualaikum|permisi|apa kabar)(\s|$|[,.!])/i;
+  var KATA_TANYA = /^(apa|apakah|bagaimana|berapa|siapa|kapan|dimana|di mana|mengapa|kenapa|bisakah|bolehkah|adakah)(\s|$)/i;
+  var AWALAN_USAHA = /^(pt|cv|ud|pd|yayasan|koperasi)(\.|\s)/i;
+  function namaPerusahaanValid(nama) {
+    var huruf = (nama.match(/\p{L}/gu) || []).length;
+    if (huruf < 3 || nama.length > 100) return false;
+    if (/[?!]\s*$/.test(nama) || KATA_TANYA.test(nama)) return false;
+    // Sapaan atau ucapan pendek tanpa awalan badan usaha bukan nama perusahaan.
+    if (KATA_BUKAN_NAMA.test(nama) && !AWALAN_USAHA.test(nama)) return false;
+    return true;
+  }
+
   function tanggapiMasukan(teks) {
     if (!perusahaan) {
       var nama = teks.replace(/\s+/g, ' ').trim();
-      if (nama.length > 100) { tambah('gagal', 'Nama perusahaan maksimal 100 karakter.'); return; }
+      if (!namaPerusahaanValid(nama)) {
+        tambah('pengguna', nama);
+        tambah('agent', 'Sepertinya itu bukan nama perusahaan. Mohon sebutkan nama perusahaan Anda, misalnya "PT Maju Bersama".');
+        return;
+      }
       perusahaan = nama;
       tambah('pengguna', nama);
       ganti.hidden = false;
