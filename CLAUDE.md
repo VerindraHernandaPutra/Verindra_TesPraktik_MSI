@@ -23,3 +23,11 @@ Sumber kebenaran: docs/PERENCANAAN.md. Jika ada yang tidak tertulis di sana, tan
 - Jangan mengubah isi KB atau jawaban acuan tanpa izin kandidat.
 - Jangan menghapus atau mengubah baris Histori.
 - Jangan membuka n8n ke internet (tanpa tunnel atau port publik).
+
+## Ekstensi E1
+- Ikuti docs/EKSTENSI_E1.md; aturan docs/PERENCANAAN.md tetap berlaku.
+- Pakai template di web/templates/; jangan mengganti gaya atau struktur template, cukup isi dan sambungkan.
+- Nomor HP hanya pola dummy 0812-0000-xxxx; jangan pernah membuat tautan wa.me, tel:, sms:, atau pemanggilan API pengirim.
+- Arsip = aktif FALSE; jangan menghapus baris Prospek atau Histori.
+- Label SIMULASI wajib tampil di formulir dan tabel peserta.
+- Di awal setiap sesi, sebutkan model dan effort yang disarankan (tabel Section 8 EKSTENSI_E1).

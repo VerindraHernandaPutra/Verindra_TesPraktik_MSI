@@ -62,6 +62,7 @@ Kolom Visual menunjukkan exhibit yang direncanakan; section tanpa kebutuhan visu
 
 | Tanggal | Versi | Perubahan | Oleh |
 | --- | --- | --- | --- |
+| 7 Nov 2026 | 1.5 | Ekstensi E1 (formulir pendaftaran, CRUD peserta, Kirim simulasi) ditambahkan sebagai backlog EB-01–EB-06; rincian di docs/EKSTENSI_E1.md. Section 9 dan 10 diperbarui saat EB-02/EB-03 dikerjakan | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.4 | Workflow disederhanakan dengan node gabungan (WF-01 dari 33 menjadi 15 node, WF-03 dari 51 menjadi 32) tanpa mengubah perilaku (27/27 uji tetap lulus); cadangan Ollama dihapus agar alur lebih sederhana: KA-01 diubah, BL-19 dan T-27 dibatalkan dan dicatat sebagai pengembangan lanjut | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.3 | Disesuaikan dengan implementasi: (1) NFR-07 dan tech stack, Claude Haiku 5.5 menolak parameter temperature sehingga konsistensi dijaga dengan effort rendah dan structured outputs (T-08 lulus); (2) KA-05 sampai KA-07, baca dan tulis Sheets lewat satu panggilan API atomik per permintaan, workflow dirakit dari sumber di repo dan dipasang lewat n8n Public API, WF-90 utilitas uji; (3) kontrak API, keputusan siap\_kirim di /approve, kolom berulang di /chat, data tambahan dan ekspor di /panel, endpoint POST /pengingat; (4) struktur repo dan panduan staf | Kandidat, dibantu Claude Code |
 | 6 Nov 2026 | 1.2 | Topik sapaan ditambahkan ke FR-02 dan pengecualian sapaan ke PJ-04: balasan salam atau pertanyaan identitas (AR-04) sebelumnya selalu ditolak pemeriksa karena tidak punya rujukan KB. Pengecualian hanya berlaku bila pertanyaan pengguna sendiri berupa sapaan pendek | Kandidat, dibantu Claude Code |
@@ -547,6 +548,12 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-19 | F3 | Jalankan pertanyaan uji dengan MODEL\_AI = ollama dan catat perbedaannya | K | Hasil dan waktu respons tercatat di Section 13 | KA-01 | Dibatalkan (1.4: Ollama dihapus) |
 | BL-20 | F3 | Rekaman demo, screenshot berurutan, ekspor workflow JSON, README final | K | Rekaman 5 menit atau kurang memuat semua uji Must; tidak ada kredensial terlihat | NFR-12 | Belum |
 | BL-21 | F3 | Laporan A7 (A1–A6, termasuk rancangan berlabel untuk A2–A5) dan isian formulir | CC + K | Gate G4: semua tautan bisa dibuka tanpa login | Section 16 | Belum |
+| EB-01 | E1 | Salin template ke web/templates/onepage dan web/templates/admin | K + CC | Halaman terpakai dan aset ada di repo | E1 | Selesai |
+| EB-02 | E1 | Kolom baru Prospek (nama\_pic, no\_hp\_pic, kategori, sumber, aktif), status Terkirim (simulasi), jenis Histori baru | CC + K | Seed, WF-90, dan run\_tests konsisten; 27 uji lama tetap lulus | E-01–E-03 | Belum |
+| EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Belum |
+| EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Belum |
+| EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Belum |
+| EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
 
 ### Definition of Done untuk setiap item
 
