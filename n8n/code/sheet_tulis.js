@@ -4,7 +4,7 @@
 
 const AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };
 const STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];
-const STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)'];
+const STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)', 'Terkirim (simulasi)'];
 
 function nomorBerikut(baris, kolom) {
   return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\D/g, ''), 10) || 0)) + 1;

@@ -318,8 +318,8 @@ def main() -> None:
             t = data()
             p = next((x for x in t["Prospek"] if x["id_prospek"] == r.get("id_prospek")), {})
             h = [x for x in t["Histori"] if x["jenis"] == "prospek_baru" and idp in x["catatan"]]
-            ok = r.get("id_prospek") == "P11" and p.get("status") == "Baru" and p.get("status_kebutuhan") == "Belum terkonfirmasi" and len(h) == 1
-            catat("T-11", ok, f"{r.get('id_prospek')} {p.get('status')}, {p.get('status_kebutuhan')}, {p.get('ae')}; Histori prospek_baru {len(h)}", dt)
+            ok = r.get("id_prospek") == "P11" and p.get("status") == "Baru" and p.get("status_kebutuhan") == "Belum terkonfirmasi" and p.get("sumber") == "chat" and p.get("aktif") == "TRUE" and len(h) == 1
+            catat("T-11", ok, f"{r.get('id_prospek')} {p.get('status')}, {p.get('status_kebutuhan')}, {p.get('ae')}, sumber={p.get('sumber')}, aktif={p.get('aktif')}; Histori prospek_baru {len(h)}", dt)
         jalankan("T-11", t11)
 
         # --- Kinerja ---

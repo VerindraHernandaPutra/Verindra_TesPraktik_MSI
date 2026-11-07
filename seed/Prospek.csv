@@ -1,11 +1,11 @@
-id_prospek,nama_perusahaan,kunci_normal,sektor,ae,status,kebutuhan,status_kebutuhan,tgl_tindak_lanjut,pengingat,dibuat,diubah
-P01,PT Simulasi Surya Reka,surya reka,Manufaktur,AE A,Baru,Pelaporan ESG,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P02,PT Simulasi Laut Biru,laut biru,Logistik,AE B,Kualifikasi,Efisiensi energi,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P03,PT Simulasi Tani Makmur,tani makmur,Agribisnis,AE A,Follow-up,Pemetaan emisi,Belum terkonfirmasi,2026-11-05,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P04,PT Simulasi Bina Dana,bina dana,Keuangan,AE B,Penawaran draf,Pelatihan internal,Belum terkonfirmasi,2026-11-07,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P05,PT Simulasi Mitra Sehat,mitra sehat,Kesehatan,AE A,Baru,Tata kelola,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P06,PT Simulasi Digital Karya,digital karya,Teknologi,AE B,Kualifikasi,Literasi ESG,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P07,PT Simulasi Tirta Lestari,tirta lestari,Air bersih,AE A,Follow-up,Indikator kinerja,Belum terkonfirmasi,2026-11-06,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P08,PT Simulasi Daya Hijau,daya hijau,Energi,AE B,Baru,Pelaporan dampak,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P09,PT Simulasi Niaga Sentosa,niaga sentosa,Perdagangan,AE A,Kualifikasi,Database prospek,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
-P10,PT Simulasi Cipta Sarana,cipta sarana,Konstruksi,AE B,Follow-up,Manajemen risiko,Belum terkonfirmasi,2026-11-09,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00
+id_prospek,nama_perusahaan,kunci_normal,sektor,ae,status,kebutuhan,status_kebutuhan,tgl_tindak_lanjut,pengingat,dibuat,diubah,nama_pic,no_hp_pic,kategori,sumber,aktif
+P01,PT Simulasi Surya Reka,surya reka,Manufaktur,AE A,Baru,Pelaporan ESG,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Rina Pratiwi,0812-0000-0001,CSR,seed,TRUE
+P02,PT Simulasi Laut Biru,laut biru,Logistik,AE B,Kualifikasi,Efisiensi energi,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Doni Saputra,0812-0000-0002,CSR,seed,TRUE
+P03,PT Simulasi Tani Makmur,tani makmur,Agribisnis,AE A,Follow-up,Pemetaan emisi,Belum terkonfirmasi,2026-11-05,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Maya Anggraini,0812-0000-0003,CSR,seed,TRUE
+P04,PT Simulasi Bina Dana,bina dana,Keuangan,AE B,Penawaran draf,Pelatihan internal,Belum terkonfirmasi,2026-11-07,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Bagas Wicaksono,0812-0000-0004,Human Capital,seed,TRUE
+P05,PT Simulasi Mitra Sehat,mitra sehat,Kesehatan,AE A,Baru,Tata kelola,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Sinta Maharani,0812-0000-0005,Tata Kelola (GRC),seed,TRUE
+P06,PT Simulasi Digital Karya,digital karya,Teknologi,AE B,Kualifikasi,Literasi ESG,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Farhan Nugroho,0812-0000-0006,Digital,seed,TRUE
+P07,PT Simulasi Tirta Lestari,tirta lestari,Air bersih,AE A,Follow-up,Indikator kinerja,Belum terkonfirmasi,2026-11-06,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Laras Wulandari,0812-0000-0007,Tata Kelola (GRC),seed,TRUE
+P08,PT Simulasi Daya Hijau,daya hijau,Energi,AE B,Baru,Pelaporan dampak,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Hendra Kusuma,0812-0000-0008,CSR,seed,TRUE
+P09,PT Simulasi Niaga Sentosa,niaga sentosa,Perdagangan,AE A,Kualifikasi,Database prospek,Belum terkonfirmasi,,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Putri Ayuningtyas,0812-0000-0009,Digital,seed,TRUE
+P10,PT Simulasi Cipta Sarana,cipta sarana,Konstruksi,AE B,Follow-up,Manajemen risiko,Belum terkonfirmasi,2026-11-09,,2026-11-03T09:00:00+07:00,2026-11-03T09:00:00+07:00,Yoga Prasetyo,0812-0000-0010,Tata Kelola (GRC),seed,TRUE

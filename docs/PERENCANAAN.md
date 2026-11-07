@@ -385,7 +385,7 @@ Format ID memakai prefiks dan nomor urut empat digit, misalnya C0001 untuk perca
 | Sheet | Kolom | Aturan |
 | --- | --- | --- |
 | KB | kode, isi, topik, tindakan, aktif | kode unik KB01–KB04; tindakan bernilai Jawab penuh atau Jawab terbatas + eskalasi; hanya baris aktif = TRUE yang dibaca agent |
-| Prospek | id\_prospek, nama\_perusahaan, kunci\_normal, sektor, ae, status, kebutuhan, status\_kebutuhan, tgl\_tindak\_lanjut, pengingat, dibuat, diubah | id\_prospek dan kunci\_normal unik; status dari daftar status pipeline; ae bernilai AE A atau AE B; kebutuhan baru selalu Belum terkonfirmasi |
+| Prospek | id\_prospek, nama\_perusahaan, kunci\_normal, sektor, ae, status, kebutuhan, status\_kebutuhan, tgl\_tindak\_lanjut, pengingat, dibuat, diubah, nama\_pic, no\_hp\_pic, kategori, sumber, aktif | id\_prospek dan kunci\_normal unik; status dari daftar status pipeline; ae bernilai AE A atau AE B; kebutuhan baru selalu Belum terkonfirmasi. Kolom E1 (docs/EKSTENSI_E1.md): nama\_pic nama fiktif; no\_hp\_pic berformat 08 diikuti 8–11 digit (seed memakai pola dummy 0812-0000-0001 sampai 0812-0000-0010); kategori dari CSR, Tata Kelola (GRC), Human Capital, Digital, BUMD (boleh kosong untuk prospek dari chat); sumber bernilai seed, formulir, chat, atau admin; aktif bernilai TRUE atau FALSE (FALSE = diarsipkan, baris tidak dihapus) |
 | Percakapan | id\_percakapan, id\_permintaan, waktu, id\_prospek, pertanyaan, topik, jawaban, rujukan\_kb, eskalasi, lolos\_pemeriksa, model\_ai | rujukan\_kb berisi kode yang ada di sheet KB, dipisah koma; model\_ai bernilai claude atau ollama; id\_permintaan unik agar coba ulang tidak membuat baris dobel |
 | Antrean\_Staf | id\_tiket, id\_percakapan, alasan, status, ditangani\_oleh, waktu | status: Baru, Ditangani, Selesai |
 | Draf | id\_draf, id\_prospek, id\_percakapan, isi\_draf, status, diputuskan\_oleh, catatan, dibuat, diputuskan | status awal selalu Menunggu persetujuan; Siap kirim (simulasi) hanya boleh setelah Disetujui; id\_percakapan kosong bila draf dibuat AE dari catatan CRM (FR-23) |
@@ -399,8 +399,8 @@ Format ID memakai prefiks dan nomor urut empat digit, misalnya C0001 untuk perca
 | --- | --- |
 | Status pipeline | Baru, Kualifikasi, Follow-up, Penawaran draf |
 | Status kebutuhan | Belum terkonfirmasi, Terkonfirmasi |
-| Status draf | Menunggu persetujuan, Disetujui, Ditolak, Siap kirim (simulasi) |
-| Jenis histori | prospek\_baru, duplikat\_terdeteksi, ubah\_status, ubah\_kebutuhan, draf\_dibuat, draf\_diputuskan |
+| Status draf | Menunggu persetujuan, Disetujui, Ditolak, Siap kirim (simulasi), Terkirim (simulasi) (hanya dari Siap kirim (simulasi)) |
+| Jenis histori | prospek\_baru, duplikat\_terdeteksi, ubah\_status, ubah\_kebutuhan, draf\_dibuat, draf\_diputuskan, pendaftaran, ubah\_peserta, arsip\_peserta, kirim\_simulasi (empat terakhir dari E1) |
 
 ### Aturan anti-dobel (FR-08)
 
@@ -426,6 +426,8 @@ P08,PT Simulasi Daya Hijau,daya hijau,Energi,AE B,Baru,Pelaporan dampak,Belum te
 P09,PT Simulasi Niaga Sentosa,niaga sentosa,Perdagangan,AE A,Kualifikasi,Database prospek,Belum terkonfirmasi,
 P10,PT Simulasi Cipta Sarana,cipta sarana,Konstruksi,AE B,Follow-up,Manajemen risiko,Belum terkonfirmasi,2026-11-09
 ```
+
+Blok di atas memotong kolom pengingat, dibuat, dan diubah. Berkas lengkap ada di seed/Prospek.csv, termasuk lima kolom E1 untuk P01–P10: nama\_pic (nama fiktif), no\_hp\_pic (0812-0000-0001 sampai 0812-0000-0010), kategori, sumber = seed, dan aktif = TRUE.
 
 ## 10. Desain workflow n8n
 

@@ -47,6 +47,11 @@ return [
         status_kebutuhan: 'Belum terkonfirmasi', // FR-10: kebutuhan baru selalu belum terkonfirmasi
         tgl_tindak_lanjut: '',
         pengingat: '',
+        nama_pic: '', // E1: diisi dari formulir pendaftaran atau admin
+        no_hp_pic: '',
+        kategori: '',
+        sumber: 'chat',
+        aktif: 'TRUE',
       },
     },
   },

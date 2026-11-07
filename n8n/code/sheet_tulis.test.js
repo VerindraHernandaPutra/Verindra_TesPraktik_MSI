@@ -10,7 +10,7 @@ const D = {
 
 test('nilai status sama dengan Section 9', () => {
   assert.deepEqual(STATUS_PIPELINE, ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf']);
-  assert.deepEqual(STATUS_DRAF, ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)']);
+  assert.deepEqual(STATUS_DRAF, ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)', 'Terkirim (simulasi)']);
 });
 
 test('nomor berikutnya melompati nilai kosong dan tidak bergantung urutan', () => {
