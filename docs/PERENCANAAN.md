@@ -516,7 +516,7 @@ Ini wireframe, bukan desain final: isi contoh diambil dari data seed dan jawaban
 
 ### Catatan teknis antarmuka
 
-- Satu file index.html dengan JavaScript biasa; alamat n8n disimpan di config.js, bukan di kode utama.
+- Sejak E1 (EB-05): halaman admin memakai template Duralux (web/templates/admin) dan formulir memakai template Eventify (web/templates/onepage), dengan JavaScript biasa; web/index.html hanya mengalihkan ke tabel peserta. Alamat n8n tetap di config.js.
 - Halaman dibuka lewat server lokal sederhana (misalnya python -m http.server) agar panggilan ke webhook n8n tidak terhalang aturan CORS peramban.
 - Tata letak diuji pada lebar laptop (1280 px); tampilan ponsel di luar lingkup.
 
@@ -558,7 +558,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | EB-02 | E1 | Kolom baru Prospek (nama\_pic, no\_hp\_pic, kategori, sumber, aktif), status Terkirim (simulasi), jenis Histori baru | CC + K | Seed, WF-90, dan run\_tests konsisten; 27 uji lama tetap lulus | E-01–E-03 | Selesai |
 | EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Selesai (T-31–T-39 lulus) |
 | EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Dibangun (web/templates/onepage/pendaftaran.html); uji peramban T-40 di sesi 6 |
-| EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Belum |
+| EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Dibangun (web/templates/admin); diperiksa di jsdom terhadap n8n live; uji peramban T-41 di sesi 6 |
 | EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
 
 ### Definition of Done untuk setiap item
@@ -643,6 +643,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-38 | E1 Kirim | Kirim draf Menunggu persetujuan, kirim sebagai admin, lalu kirim draf Siap kirim (simulasi) sebagai staf | Dua penolakan 400; draf Terkirim (simulasi); Histori kirim\_simulasi berisi nomor dummy | O | E-03 | Lulus (7 Nov 2026, run_tests.py): draf Menunggu dan peran admin ditolak 400; D0001 Terkirim (simulasi) ke 0812-0000-0003; Histori kirim\_simulasi 1 |
 | T-39 | E1 Keamanan | Cari wa.me, tel:, sms:, dan node pengirim pesan di n8n/ dan web/ | Tidak ditemukan | O | E-03, NFR-02 | Lulus (7 Nov 2026, run_tests.py): tidak ada wa.me, tel:, sms:, atau node pengirim |
 | T-40 | E1 Formulir | Buka http://localhost:8000/templates/onepage/pendaftaran.html: kirim kosong, HP non-dummy, pendaftaran sah, nama yang sudah ada, matikan n8n lalu Coba ulang | Pesan Indonesia untuk tiap kasus; label SIMULASI tampil; tombol nonaktif saat memuat; Coba ulang tidak menggandakan data | M | E-01 | Belum diuji |
+| T-41 | E1 Peserta | Di peramban buka http://localhost:8000: Tabel Peserta (cari, filter status dan AE, tambah, ubah, arsip dengan konfirmasi), Chat, Panel Staf (Kirim (simulasi)), Dashboard, pada lebar laptop 1280 px | Tampilan mengikuti template; label SIMULASI tampil di setiap halaman; pesan dalam Bahasa Indonesia; tidak ada galat di konsol | M | E-02, E-03 | Belum diuji |
 
 ### Matriks keterlacakan
 
@@ -671,8 +672,8 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-19 | Could | T-25 |
 | FR-23 | Must | T-30 |
 | E-01 (E1) | Must | T-31, T-32, T-33, T-34, T-40 |
-| E-02 (E1) | Must | T-35, T-36, T-37 |
-| E-03 (E1) | Must | T-38, T-39 |
+| E-02 (E1) | Must | T-35, T-36, T-37, T-41 |
+| E-03 (E1) | Must | T-38, T-39, T-41 |
 
 ## 14. Manajemen risiko
 

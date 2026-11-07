@@ -2,7 +2,7 @@
 
 > **SIMULASI.** Semua perusahaan dan data bersifat fiktif. Tidak ada pesan yang dikirim ke pihak mana pun.
 
-Halaman: **http://localhost:8000**. Pilihan peran adalah simulasi, bukan login.
+Halaman: **http://localhost:8000** (menu di sisi kiri: Tabel Peserta, Chat, Panel Staf, Dashboard, dan Formulir Pendaftaran). Pilihan peran adalah simulasi, bukan login.
 
 ## Tab Panel staf (untuk staf layanan)
 
