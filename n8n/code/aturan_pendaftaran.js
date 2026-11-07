@@ -163,5 +163,5 @@ function prosesPendaftaran(D, m, waktu) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { KATEGORI_E1, normalisasiHpDummy, validasiPendaftaran, cariHistoriPendaftaran, prosesPendaftaran };
+  module.exports = { KATEGORI_E1, teksRapi, tandaPermintaan, normalisasiHpDummy, validasiPendaftaran, cariHistoriPendaftaran, prosesPendaftaran };
 }

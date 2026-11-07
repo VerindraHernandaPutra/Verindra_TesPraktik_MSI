@@ -11,7 +11,7 @@ Keluaran (n8n/workflows/):
   WF-03_keputusan_status.json   POST /approve, /prospek/status, /prospek/draf
   WF-04_pengingat_harian.json   jadwal 08.00, manual, POST /pengingat
   WF-05_penanganan_error.json   error workflow (Log_Error)
-  WF-06_pendaftaran_peserta.json  Ekstensi E1: POST /pendaftaran
+  WF-06_pendaftaran_peserta.json  Ekstensi E1: POST /pendaftaran, /peserta, /draf/kirim
   WF-90_reset_seed.json         utilitas uji: reset seed, ubah Konfigurasi, baca data
 
 NODE GABUNGAN: beberapa file kode yang berurutan dijalankan dalam SATU Code node agar kanvas n8n sederhana.
@@ -43,6 +43,9 @@ SHEET_SEED = ["KB", "Prospek", "Percakapan", "Antrean_Staf", "Draf", "Histori", 
 
 TOLAK_VALID = "__out.valid ? null : { aksi: 'tolak', kode: 400, body: { status: 'ditolak', pesan: __out.pesan } }"
 TOLAK_BOLEH = "__out.boleh === false ? { aksi: 'tolak', kode: 400, body: { status: 'ditolak', pesan: __out.pesan } } : null"
+# Seperti TOLAK_BOLEH, ditambah permintaan berulang (lama: true) yang dijawab 200 dengan hasil lama tanpa menulis.
+TOLAK_ATAU_LAMA = ("__out.boleh === false ? { aksi: 'tolak', kode: 400, body: { status: 'ditolak', pesan: __out.pesan } } "
+                   ": (__out.lama ? { aksi: 'lama', kode: 200, body: __out.respons } : null)")
 BODY_GAGAL = ("={{ JSON.stringify({ status: 'gagal', "
               "pesan: 'Layanan sedang bermasalah, permintaan tidak dapat diproses. Silakan coba ulang.' }) }}")
 
@@ -579,7 +582,7 @@ def bangun_wf05(env) -> dict:
 # ---------- WF-06 (Ekstensi E1) ----------
 
 def bangun_wf06(env) -> dict:
-    """POST /pendaftaran (E-01): formulir > anti-dobel > [Prospek +] Histori (atomik) > pertanyaan awal ke WF-01."""
+    """E1: POST /pendaftaran (E-01), POST /peserta (E-02), POST /draf/kirim (E-03). Tidak ada node pengirim pesan."""
     _AWALAN_ID[0] = "WF-06"
     r = Rakitan()
     wf = "WF-06 Pendaftaran dan peserta"
@@ -619,8 +622,25 @@ def bangun_wf06(env) -> dict:
     ]
     gn, gk, catat = jalur_gagal(r, env, 440, y + 420, wf, "Validasi Pendaftaran", "Olah Sheet Pendaftaran", " (Pendaftaran)")
     nodes += gn
+    aturan_peserta = (*aturan, "n8n/code/aturan_peserta.js")
+    sp = ["Prospek", "Histori", "Log_Error"]
+    n2, k2 = endpoint(r, env, y=1300, akhiran="Peserta", workflow=wf, metode="POST", path="peserta", sheets=sp, tulis=True, ls=[
+        langkah("Validasi Peserta", gabung(*aturan_peserta, "n8n/code/wf06/validasi_peserta.js"),
+                masukan="Terima Peserta", berhenti=TOLAK_VALID),
+        langkah("Olah Sheet Peserta", kode_olah(sp), masukan="input"),
+        langkah("Proses Peserta", gabung(*aturan_peserta, "n8n/code/wf06/proses_peserta.js"), berhenti=TOLAK_ATAU_LAMA),
+    ])
+    sk = ["Draf", "Prospek", "Histori", "Log_Error"]
+    n3, k3 = endpoint(r, env, y=1900, akhiran="Kirim Draf", workflow=wf, metode="POST", path="draf/kirim", sheets=sk, tulis=True, ls=[
+        langkah("Validasi Kirim", gabung(*aturan_peserta, "n8n/code/wf06/validasi_kirim.js"),
+                masukan="Terima Kirim Draf", berhenti=TOLAK_VALID),
+        langkah("Olah Sheet Kirim", kode_olah(sk), masukan="input"),
+        langkah("Proses Kirim", gabung(*aturan_peserta, "n8n/code/wf06/proses_kirim.js"), berhenti=TOLAK_BOLEH),
+    ])
+    nodes += n2 + n3
     r.selesaikan(nodes)
     koneksi = [
+        *k2, *k3,
         ("Terima Pendaftaran", 0, "Baca Sheet Pendaftaran"), ("Baca Sheet Pendaftaran", 0, "Proses Pendaftaran"),
         ("Proses Pendaftaran", 0, "Tulis Pendaftaran?"), ("Tulis Pendaftaran?", 0, "Tulis Pendaftaran"),
         ("Tulis Pendaftaran?", 1, "Berulang?"), ("Berulang?", 0, "Ada Pertanyaan Awal?"),

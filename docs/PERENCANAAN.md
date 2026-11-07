@@ -446,7 +446,7 @@ Langkah 5–8 berada di zona tulis: jika salah satu gagal, atau MODE\_GAGAL akti
 | WF-03 Keputusan dan status | Webhook POST /approve, POST /prospek/status, dan POST /prospek/draf | Menyetujui atau menolak draf, mengubah status prospek, membuat draf penawaran AI dari catatan AE, menulis Histori | S2 | FR-09, FR-14, FR-23 |
 | WF-04 Pengingat harian | Schedule Trigger pukul 08.00, tombol jalankan manual, dan webhook POST /pengingat | Menandai prospek dengan tgl\_tindak\_lanjut sama dengan atau sebelum TANGGAL\_SIMULASI | S3 | FR-11 |
 | WF-05 Penanganan error | Error Trigger (error workflow untuk semua workflow) | Menulis Log\_Error untuk kegagalan yang lolos dari jalur gagal; jalur gagal di tiap workflow menulis Log\_Error sendiri dan merespons status gagal | S2 | FR-16, FR-17 |
-| WF-06 Pendaftaran dan peserta (E1) | Webhook POST /pendaftaran | Formulir pendaftaran: validasi (HP dummy 0812-0000-xxxx), anti-dobel per kunci\_normal, Prospek baru + Histori pendaftaran dalam satu batchUpdate, pertanyaan awal diteruskan ke POST /chat (WF-01). POST /peserta dan POST /draf/kirim menyusul (EB-03b) | E1 | E-01, FR-08 |
+| WF-06 Pendaftaran dan peserta (E1) | Webhook POST /pendaftaran, POST /peserta, POST /draf/kirim | Formulir pendaftaran: validasi (HP dummy 0812-0000-xxxx), anti-dobel per kunci\_normal, Prospek baru + Histori pendaftaran dalam satu batchUpdate, pertanyaan awal diteruskan ke POST /chat (WF-01). Tabel peserta: tambah, ubah, arsip (aktif FALSE, tanpa hapus) dengan Histori. Kirim (simulasi): Siap kirim (simulasi) → Terkirim (simulasi) + Histori kirim\_simulasi; tidak ada node pengirim | E1 | E-01–E-03, FR-08, FR-15 |
 | WF-90 Reset seed (utilitas uji) | Webhook POST /reset-seed, POST /uji/konfigurasi, GET /uji/data dengan Header Auth | Menulis ulang sheet dari seed/, mengubah MODE\_GAGAL/MODEL\_AI/TANGGAL\_SIMULASI, membaca isi sheet untuk run\_tests.py | F3 | Section 13 |
 
 ### Kontrak API (webhook)
@@ -456,11 +456,13 @@ Halaman web hanya berbicara dengan n8n lewat kontrak ini, jadi bagian depan dan 
 | Endpoint | Masukan | Keluaran sukses | Ditolak atau gagal bila |
 | --- | --- | --- | --- |
 | POST /chat | id\_permintaan, prospek (ID P01–P10 atau nama), pertanyaan | status ok, jawaban, rujukan\_kb, eskalasi, id\_prospek, id\_draf; berulang: true bila id\_permintaan sudah tercatat | Pertanyaan kosong; penulisan gagal → status gagal, pesan, id\_permintaan |
-| GET /panel | peran: staf, ae\_a, ae\_b, atau admin | prospek, ringkasan per status dan per AE, antrean, draf menunggu, draf disetujui, pengingat, tindak lanjut mendatang; ekspor=1 menambah baris lengkap Prospek dan Histori | Peran tidak dikenal |
+| GET /panel | peran: staf, ae\_a, ae\_b, atau admin | prospek (hanya aktif; E1 menambah nama\_pic, no\_hp\_pic, kategori, sumber, dibuat, diubah), ringkasan per status dan per AE (E1: + diarsipkan), draf\_siap\_kirim dan draf\_terkirim (E1, dengan no\_hp\_pic), antrean, draf menunggu, draf disetujui, pengingat, tindak lanjut mendatang; ekspor=1 menambah baris lengkap Prospek dan Histori | Peran tidak dikenal |
 | POST /approve | id\_draf, keputusan (setuju, tolak, atau siap\_kirim), catatan (wajib untuk tolak), oleh | status ok, status\_draf baru | Setuju/tolak bukan dari Menunggu persetujuan; siap\_kirim bukan dari Disetujui; peran bukan staf |
 | POST /prospek/status | id\_prospek, status\_baru, oleh | status ok, isi Histori | Status di luar daftar Section 9; AE mengubah prospek milik AE lain |
 | POST /prospek/draf | id\_prospek, catatan, oleh | status ok, id\_draf, isi\_draf berstatus Menunggu persetujuan | Catatan kosong; AE meminta draf untuk prospek milik AE lain |
 | POST /pendaftaran (E1) | id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic (pola dummy 0812-0000-xxxx), kategori, pertanyaan (opsional), setuju\_simulasi = true | status ok, baru (true/false), id\_prospek, nama\_perusahaan, pesan (“… tercatat sebagai P12” atau “… sudah terdaftar sebagai P03; data tidak ditambah.”), berulang, chat (hasil POST /chat untuk pertanyaan awal dengan id\_permintaan + “-awal”, atau null) | Kolom wajib kosong, nomor HP bukan pola dummy, kategori di luar daftar, centang simulasi tidak dicentang; penulisan gagal → status gagal |
+| POST /peserta (E1) | aksi (tambah, ubah, atau arsip), oleh (admin, ae\_a, ae\_b); tambah: id\_permintaan, nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae (opsional, admin); ubah: id\_prospek + kolom yang diubah (nama\_perusahaan, sektor, nama\_pic, no\_hp\_pic, kategori, ae khusus admin); arsip: id\_prospek; catatan opsional | status ok, aksi, id\_prospek, pesan; tambah: berulang; ubah: daftar kolom diubah | Peran staf; AE mengubah prospek AE lain; nama sudah terdaftar (tambah) atau dipakai prospek lain (ubah); tidak ada perubahan; prospek sudah diarsipkan; HP bukan pola dummy |
+| POST /draf/kirim (E1) | id\_draf, oleh (staf) | status ok, status\_draf Terkirim (simulasi), no\_tujuan (nomor dummy), pesan | Bukan staf; draf bukan Siap kirim (simulasi); prospek diarsipkan atau tanpa nomor HP dummy |
 | POST /pengingat | (kosong) | status ok, daftar prospek yang ditandai, jumlah sel berubah | — |
 
 ### Aturan keandalan
@@ -554,7 +556,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | BL-21 | F3 | Laporan A7 (A1–A6, termasuk rancangan berlabel untuk A2–A5) dan isian formulir | CC + K | Gate G4: semua tautan bisa dibuka tanpa login | Section 16 | Belum |
 | EB-01 | E1 | Salin template ke web/templates/onepage dan web/templates/admin | K + CC | Halaman terpakai dan aset ada di repo | E1 | Selesai |
 | EB-02 | E1 | Kolom baru Prospek (nama\_pic, no\_hp\_pic, kategori, sumber, aktif), status Terkirim (simulasi), jenis Histori baru | CC + K | Seed, WF-90, dan run\_tests konsisten; 27 uji lama tetap lulus | E-01–E-03 | Selesai |
-| EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Sebagian (EB-03a /pendaftaran selesai; T-31–T-34 lulus) |
+| EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Selesai (T-31–T-39 lulus) |
 | EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Belum |
 | EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Belum |
 | EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
@@ -635,6 +637,11 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-32 | E1 Formulir | Pendaftaran “PT Simulasi Formulir Baru”, lalu kirim ulang dengan id\_permintaan sama | Prospek bertambah satu (sumber formulir, aktif TRUE, Baru); Histori pendaftaran; kirim ulang berulang tanpa baris baru | O | E-01, FR-08 | Lulus (7 Nov 2026, run_tests.py): P12 sumber formulir, aktif TRUE; Histori pendaftaran 1; kirim ulang berulang tanpa baris baru |
 | T-33 | E1 Formulir | Pendaftaran “PT. Tani Makmur” | Pesan “sudah terdaftar sebagai P03”; Prospek tetap; Histori duplikat\_terdeteksi | O | E-01, FR-08 | Lulus (7 Nov 2026, run_tests.py): dikenali P03 “sudah terdaftar sebagai P03”; Prospek tetap 12; Histori duplikat 1 |
 | T-34 | E1 Formulir | Pendaftaran baru dengan pertanyaan awal “Apakah pendaftaran dipungut biaya?” | Prospek baru; chat status ok dengan rujukan KB01; satu baris Percakapan | O | E-01, FR-02 | Lulus (7 Nov 2026, run_tests.py): P13; chat ok rujukan KB01; Percakapan 1 |
+| T-35 | E1 Peserta | Admin menambah “PT Simulasi Peserta Admin”, kirim ulang id sama, lalu tambah “PT. Laut Biru” | Prospek +1 (sumber admin, aktif TRUE); Histori pendaftaran; kirim ulang berulang; dobel ditolak 400 | O | E-02, FR-08 | Lulus (7 Nov 2026, run_tests.py): P14 sumber admin; Histori pendaftaran 1; kirim ulang berulang; dobel P02 ditolak 400 |
+| T-36 | E1 Peserta | AE A mengubah nama\_pic dan no\_hp\_pic P01; AE B mengubah P01 | Dua Histori ubah\_peserta; AE B ditolak 400 | O | E-02, FR-15 | Lulus (7 Nov 2026, run_tests.py): AE A ubah nama\_pic dan no\_hp\_pic P01, Histori ubah\_peserta 2; AE B ditolak 400 |
+| T-37 | E1 Peserta | Admin mengarsipkan P05, lalu mengarsipkan lagi | aktif FALSE, baris tetap ada; Histori arsip\_peserta; P05 hilang dari panel; arsip ulang ditolak 400 | O | E-02 | Lulus (7 Nov 2026, run_tests.py): P05 aktif FALSE, baris tetap 14; Histori arsip\_peserta 1; arsip ulang 400; panel total 14 menjadi 13 |
+| T-38 | E1 Kirim | Kirim draf Menunggu persetujuan, kirim sebagai admin, lalu kirim draf Siap kirim (simulasi) sebagai staf | Dua penolakan 400; draf Terkirim (simulasi); Histori kirim\_simulasi berisi nomor dummy | O | E-03 | Lulus (7 Nov 2026, run_tests.py): draf Menunggu dan peran admin ditolak 400; D0001 Terkirim (simulasi) ke 0812-0000-0003; Histori kirim\_simulasi 1 |
+| T-39 | E1 Keamanan | Cari wa.me, tel:, sms:, dan node pengirim pesan di n8n/ dan web/ | Tidak ditemukan | O | E-03, NFR-02 | Lulus (7 Nov 2026, run_tests.py): tidak ada wa.me, tel:, sms:, atau node pengirim |
 
 ### Matriks keterlacakan
 
@@ -663,6 +670,8 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-19 | Could | T-25 |
 | FR-23 | Must | T-30 |
 | E-01 (E1) | Must | T-31, T-32, T-33, T-34 |
+| E-02 (E1) | Must | T-35, T-36, T-37 |
+| E-03 (E1) | Must | T-38, T-39 |
 
 ## 14. Manajemen risiko
 

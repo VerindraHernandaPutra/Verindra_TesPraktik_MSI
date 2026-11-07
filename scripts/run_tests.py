@@ -373,6 +373,81 @@ def main() -> None:
             catat("T-34", ok, f"{r.get('id_prospek')}; chat {c.get('status')} rujukan {c.get('rujukan_kb')}; Percakapan {len(perc)}", dt)
         jalankan("T-34", t34)
 
+        # --- Ekstensi E1: tabel peserta POST /peserta dan Kirim (simulasi) POST /draf/kirim (setelah T-17) ---
+        def peserta(**body):
+            return api("POST", "/peserta", body)
+
+        def t35():
+            sebelum = data()
+            idp = f"uji-peserta-{int(time.time() * 1000) % 1000000}"
+            isi = {"aksi": "tambah", "oleh": "admin", "id_permintaan": idp, "nama_perusahaan": "PT Simulasi Peserta Admin",
+                   "sektor": "Pendidikan", "nama_pic": "Sari Wijaya", "no_hp_pic": "0812-0000-0021", "kategori": "Human Capital"}
+            k, r, dt = peserta(**isi)
+            t = data()
+            p = next((x for x in t["Prospek"] if x["id_prospek"] == r.get("id_prospek")), {})
+            h = [x for x in t["Histori"] if x["jenis"] == "pendaftaran" and x["catatan"].endswith(idp)]
+            k2, r2, _ = peserta(**isi)
+            k3, r3, _ = peserta(**{**isi, "id_permintaan": idp + "-b", "nama_perusahaan": "PT. Laut Biru"})
+            sama = hitung(t) == hitung(data())
+            ok = (k == 200 and len(t["Prospek"]) == len(sebelum["Prospek"]) + 1 and p.get("sumber") == "admin"
+                  and p.get("aktif") == "TRUE" and len(h) == 1 and r2.get("berulang") is True and k3 == 400 and sama)
+            catat("T-35", ok, f"{r.get('id_prospek')} sumber={p.get('sumber')}; Histori pendaftaran {len(h)}; kirim ulang berulang="
+                              f"{r2.get('berulang')}; dobel P02 HTTP {k3}; tanpa baris baru: {sama}", dt)
+        jalankan("T-35", t35)
+
+        def t36():
+            k, r, dt = peserta(aksi="ubah", oleh="ae_a", id_prospek="P01", nama_pic="Rina Pratiwi Putri", no_hp_pic="0812-0000-0031")
+            k2, r2, _ = peserta(aksi="ubah", oleh="ae_b", id_prospek="P01", sektor="Energi")
+            t = data()
+            p01 = next(x for x in t["Prospek"] if x["id_prospek"] == "P01")
+            h = [x for x in t["Histori"] if x["jenis"] == "ubah_peserta" and x["id_prospek"] == "P01"]
+            ok = (k == 200 and r.get("diubah") == ["nama_pic", "no_hp_pic"] and p01["nama_pic"] == "Rina Pratiwi Putri"
+                  and p01["no_hp_pic"] == "0812-0000-0031" and p01["sektor"] == "Manufaktur" and len(h) == 2 and k2 == 400)
+            catat("T-36", ok, f"AE A ubah P01 {r.get('diubah')}; Histori ubah_peserta {len(h)}; AE B ditolak HTTP {k2}", dt)
+        jalankan("T-36", t36)
+
+        def t37():
+            sebelum = data()
+            _, panel0, _ = api("GET", "/panel?peran=admin")
+            k, r, dt = peserta(aksi="arsip", oleh="admin", id_prospek="P05", catatan="Uji arsip T-37")
+            k2, _, _ = peserta(aksi="arsip", oleh="admin", id_prospek="P05")
+            t = data()
+            _, panel1, _ = api("GET", "/panel?peran=admin")
+            p05 = next(x for x in t["Prospek"] if x["id_prospek"] == "P05")
+            h = [x for x in t["Histori"] if x["jenis"] == "arsip_peserta" and x["id_prospek"] == "P05"]
+            terlihat = any(x["id_prospek"] == "P05" for x in panel1.get("prospek", []))
+            ok = (k == 200 and p05["aktif"] == "FALSE" and len(t["Prospek"]) == len(sebelum["Prospek"]) and len(h) == 1 and k2 == 400
+                  and not terlihat and panel1["ringkasan"]["total"] == panel0["ringkasan"]["total"] - 1)
+            catat("T-37", ok, f"P05 aktif={p05['aktif']}, baris tetap {len(t['Prospek'])}; Histori arsip_peserta {len(h)}; arsip ulang HTTP {k2}; "
+                              f"panel total {panel0['ringkasan']['total']}->{panel1['ringkasan']['total']}", dt)
+        jalankan("T-37", t37)
+
+        def t38():
+            t = data()
+            siap = next((d for d in t["Draf"] if d["status"] == "Siap kirim (simulasi)"), None)
+            belum = next((d for d in t["Draf"] if d["status"] == "Menunggu persetujuan"), None)
+            if not siap or not belum:
+                raise RuntimeError("butuh draf Siap kirim (simulasi) dan Menunggu persetujuan (jalankan setelah T-17)")
+            hp = next(p["no_hp_pic"] for p in t["Prospek"] if p["id_prospek"] == siap["id_prospek"])
+            k1, _, _ = api("POST", "/draf/kirim", {"id_draf": belum["id_draf"], "oleh": "staf"})
+            k2, _, _ = api("POST", "/draf/kirim", {"id_draf": siap["id_draf"], "oleh": "admin"})
+            k, r, dt = api("POST", "/draf/kirim", {"id_draf": siap["id_draf"], "oleh": "staf"})
+            t2 = data()
+            d = next(x for x in t2["Draf"] if x["id_draf"] == siap["id_draf"])
+            h = [x for x in t2["Histori"] if x["jenis"] == "kirim_simulasi" and x["catatan"].startswith(siap["id_draf"])]
+            ok = (k1 == 400 and k2 == 400 and k == 200 and d["status"] == "Terkirim (simulasi)" and r.get("no_tujuan") == hp
+                  and len(h) == 1 and hp in h[0]["catatan"])
+            catat("T-38", ok, f"{belum['id_draf']} Menunggu ditolak HTTP {k1}; peran admin HTTP {k2}; {siap['id_draf']} -> {d['status']} "
+                              f"ke {r.get('no_tujuan')}; Histori kirim_simulasi {len(h)}", dt)
+        jalankan("T-38", t38)
+
+        def t39():
+            pola = r"wa\.me|api\.whatsapp|href=[\"']?(tel|sms):|gmail\.googleapis|n8n-nodes-base\.(gmail|emailSend|whatsApp|twilio|telegram|slack)"
+            grep = subprocess.run(["git", "grep", "-nIE", pola, "--", "n8n", "web", ":!web/templates"], cwd=ROOT, capture_output=True, text=True)
+            catat("T-39", grep.returncode == 1, "repo n8n/ dan web/: tanpa wa.me, tel:, sms:, atau node pengirim pesan"
+                  if grep.returncode == 1 else f"temuan: {grep.stdout[:160]}")
+        jalankan("T-39", t39)
+
         # --- Kinerja ---
         def t26():
             waktu = [w for w in simpan.get("waktu_t01", []) if w][:3]

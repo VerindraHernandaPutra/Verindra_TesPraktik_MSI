@@ -6,6 +6,11 @@ const AKTOR = { staf: 'Staf', ae_a: 'AE A', ae_b: 'AE B', admin: 'Admin' };
 const STATUS_PIPELINE = ['Baru', 'Kualifikasi', 'Follow-up', 'Penawaran draf'];
 const STATUS_DRAF = ['Menunggu persetujuan', 'Disetujui', 'Ditolak', 'Siap kirim (simulasi)', 'Terkirim (simulasi)'];
 
+// E1: arsip = aktif FALSE; baris tanpa nilai aktif (data sebelum E1) dianggap aktif.
+function pesertaAktif(p) {
+  return String((p && p.aktif) ?? '').trim().toUpperCase() !== 'FALSE';
+}
+
 function nomorBerikut(baris, kolom) {
   return Math.max(0, ...baris.map((r) => parseInt(String(r[kolom] || '').replace(/\D/g, ''), 10) || 0)) + 1;
 }
@@ -60,5 +65,5 @@ function ubahSel(D, sheet, objek, perubahan) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };
+  module.exports = { AKTOR, STATUS_PIPELINE, STATUS_DRAF, pesertaAktif, nomorBerikut, idBaru, sel, tambahBaris, ubahSel };
 }

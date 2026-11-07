@@ -8,13 +8,17 @@ const konfig = Object.fromEntries(T.Konfigurasi.map((r) => [String(r.kunci).trim
 const tanggal = konfig.TANGGAL_SIMULASI || '';
 
 const semua = T.Prospek.filter((p) => String(p.id_prospek || '').trim());
-const terlihat = peran === 'ae_a' || peran === 'ae_b' ? semua.filter((p) => p.ae === AKTOR[peran]) : semua;
+const milikPeran = peran === 'ae_a' || peran === 'ae_b' ? semua.filter((p) => p.ae === AKTOR[peran]) : semua;
+// E1: dashboard, tabel peserta, antrean, dan draf hanya memakai peserta aktif; arsip tetap ada di sheet dan ekspor.
+const terlihat = milikPeran.filter(pesertaAktif);
 const idTerlihat = new Set(terlihat.map((p) => p.id_prospek));
 const namaProspek = Object.fromEntries(semua.map((p) => [p.id_prospek, p.nama_perusahaan]));
+const hpProspek = Object.fromEntries(semua.map((p) => [p.id_prospek, p.no_hp_pic || '']));
 const percakapan = Object.fromEntries(T.Percakapan.map((c) => [c.id_percakapan, c]));
 
 const KOLOM_PROSPEK = [
   'id_prospek', 'nama_perusahaan', 'sektor', 'ae', 'status', 'kebutuhan', 'status_kebutuhan', 'tgl_tindak_lanjut', 'pengingat',
+  'nama_pic', 'no_hp_pic', 'kategori', 'sumber', 'dibuat', 'diubah',
 ];
 const prospek = terlihat.map((p) => Object.fromEntries(KOLOM_PROSPEK.map((k) => [k, p[k] ?? ''])));
 
@@ -47,6 +51,7 @@ const daftarDraf = (status) =>
         id_draf: d.id_draf,
         id_prospek: d.id_prospek,
         nama_perusahaan: namaProspek[d.id_prospek] || '',
+        no_hp_pic: hpProspek[d.id_prospek] || '', // E-03: tujuan tombol Kirim (simulasi), nomor dummy
         id_percakapan: d.id_percakapan || '',
         pertanyaan: c.pertanyaan || '',
         isi_draf: d.isi_draf,
@@ -74,8 +79,12 @@ const urutTanggal = (a, b) => a.tgl_tindak_lanjut.localeCompare(b.tgl_tindak_lan
 const barisLengkap = (sheet, daftar) => daftar.map((r) => header[sheet].map((k) => r[k] ?? ''));
 const dataEkspor = ekspor
   ? {
-      prospek: { kolom: header.Prospek, baris: barisLengkap('Prospek', terlihat) },
-      histori: { kolom: header.Histori, baris: barisLengkap('Histori', T.Histori.filter((h) => idTerlihat.has(h.id_prospek))) },
+      // Ekspor memuat juga peserta yang diarsipkan (kolom aktif FALSE), karena arsip bukan penghapusan.
+      prospek: { kolom: header.Prospek, baris: barisLengkap('Prospek', milikPeran) },
+      histori: {
+        kolom: header.Histori,
+        baris: barisLengkap('Histori', T.Histori.filter((h) => milikPeran.some((p) => p.id_prospek === h.id_prospek))),
+      },
     }
   : undefined;
 
@@ -86,10 +95,12 @@ return [
       peran,
       tanggal_simulasi: tanggal,
       prospek,
-      ringkasan: { total: terlihat.length, per_status, per_ae },
+      ringkasan: { total: terlihat.length, per_status, per_ae, diarsipkan: milikPeran.length - terlihat.length },
       antrean,
       draf_menunggu: daftarDraf('Menunggu persetujuan'),
       draf_disetujui: daftarDraf('Disetujui'),
+      draf_siap_kirim: daftarDraf('Siap kirim (simulasi)'),
+      draf_terkirim: daftarDraf('Terkirim (simulasi)'),
       pengingat: pengingat.sort(urutTanggal),
       tindak_lanjut_mendatang: tindak_lanjut_mendatang.sort(urutTanggal),
       ekspor: dataEkspor,
