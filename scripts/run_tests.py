@@ -463,7 +463,7 @@ def main() -> None:
         def t39():
             pola = r"wa\.me|api\.whatsapp|href=[\"']?(tel|sms):|gmail\.googleapis|n8n-nodes-base\.(gmail|emailSend|whatsApp|twilio|telegram|slack)"
             grep = subprocess.run(["git", "grep", "-nIE", pola, "--", "n8n", "web"], cwd=ROOT, capture_output=True, text=True)
-            catat("T-39", grep.returncode == 1, "repo n8n/ dan web/ (termasuk web/templates): tanpa wa.me, tel:, sms:, atau node pengirim pesan"
+            catat("T-39", grep.returncode == 1, "repo n8n/ dan web/ (situs publik dan admin): tanpa wa.me, tel:, sms:, atau node pengirim pesan"
                   if grep.returncode == 1 else f"temuan: {grep.stdout[:160]}")
         jalankan("T-39", t39)
 

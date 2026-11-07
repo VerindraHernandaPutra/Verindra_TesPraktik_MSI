@@ -41,7 +41,7 @@
             return t === 'display' ? '<div>' + M.esc(v || '–') + '</div><div class="fs-12 text-muted">' + M.esc(p.no_hp_pic || '–') + '</div>' : (v || '') + ' ' + (p.no_hp_pic || '');
           } },
         { data: 'kategori', render: function (v, t) { return t === 'display' ? M.esc(v || '–') : v || ''; } },
-        { data: 'ae' },
+        { data: 'ae', render: function (v, t) { return t === 'display' ? M.esc(v) : v; } },
         { data: 'status', render: function (v, t) { return t === 'display' ? lencanaStatus(v) : v; } },
         { data: 'sumber', render: function (v, t) { return t === 'display' ? M.esc(v || '–') : v || ''; } },
         { data: 'diubah', render: function (v, t) { return t === 'display' ? M.esc(M.formatWaktu(v) || '–') : v || ''; } },
