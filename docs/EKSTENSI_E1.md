@@ -102,6 +102,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - R4 (7 Nov 2026): sidebar admin selaras di semua lebar. Penyebab: tema menyiutkan sidebar lewat CSS di bawah 1600 px, tetapi kelas minimenu (penggeser isi dan header) baru dipasang saat jendela diubah ukurannya; msi-umum.js kini memicu resize sekali saat halaman dimuat. Seed nama “PT Simulasi …” sengaja dibiarkan (keputusan kandidat).
 
+- Penyempurnaan tampilan (7 Nov 2026): Kategori memakai kartu choose-widget template dengan ikon FontAwesome berbeda per kategori; Tahapan memakai garis waktu (komponen kecil di web/assets/css/msi.css, warna dan font template); jarak CTA diperbaiki; logo admin diperkecil dan header admin dirata-tengahkan (web/admin/assets/css/msi-admin.css).
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

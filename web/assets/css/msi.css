@@ -129,3 +129,74 @@
   .asisten-fab { right: 16px; bottom: 90px; }
   .asisten-panel { right: 16px; bottom: 150px; }
 }
+
+/* Kategori: ikon FontAwesome di dalam lingkaran ikon template (choose-widget). */
+.choose-section-area .choose-widget-boxarea .icons i {
+  font-size: 28px;
+  line-height: 70px;
+  color: var(--ztc-text-text-2);
+}
+.choose-section-area .choose-widget-boxarea .readmore { font-size: 16px; }
+
+/* Tahapan: garis waktu horizontal (vertikal di layar sempit) memakai warna dan font template. */
+.msi-timeline { display: flex; margin: 0; padding: 0; list-style: none; }
+.msi-timeline li { position: relative; flex: 1; padding: 0 14px; text-align: center; }
+.msi-timeline li::before {
+  content: "";
+  position: absolute;
+  top: 34px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: var(--ztc-bg-bg-9);
+  opacity: 0.35;
+}
+.msi-timeline li:first-child::before { display: none; }
+.msi-timeline .titik {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: var(--ztc-bg-bg-9);
+  color: var(--ztc-text-text-1);
+  font-size: 26px;
+  box-shadow: 0 0 0 8px var(--ztc-bg-bg-1);
+}
+.msi-timeline li:last-child .titik { background: var(--ztc-bg-bg-3); color: var(--ztc-text-text-2); }
+.msi-timeline .tahap {
+  display: block;
+  color: var(--ztc-bg-bg-9);
+  font-family: var(--ztc-family-font1);
+  font-size: 13px;
+  font-weight: var(--ztc-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.msi-timeline h4 { margin: 6px 0 8px; color: var(--ztc-text-text-2); font-family: var(--ztc-family-font1); font-size: 20px; }
+.msi-timeline p { margin: 0; color: var(--ztc-text-text-3); font-size: 15px; line-height: 24px; }
+@media (max-width: 991px) {
+  .msi-timeline { flex-direction: column; }
+  .msi-timeline li { padding: 0 0 32px 94px; text-align: left; min-height: 70px; }
+  .msi-timeline li::before { display: none !important; }
+  .msi-timeline li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 33px;
+    top: 70px;
+    bottom: 0;
+    width: 3px;
+    background: var(--ztc-bg-bg-9);
+    opacity: 0.35;
+  }
+  .msi-timeline .titik { position: absolute; left: 0; top: 0; margin: 0; }
+}
+
+/* CTA: beri jarak dari bagian di atasnya dan dari garis pemisah. */
+.cta4-section-area { margin-top: 70px; }
+.cta4-section-area .cta1-main-boxarea .timer-btn-area .heading-area { padding-right: 28px; }
+@media (max-width: 767px) { .cta4-section-area .cta1-main-boxarea .timer-btn-area .heading-area { padding: 0 0 16px; } }
