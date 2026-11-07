@@ -645,6 +645,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-40 | E1 Formulir | Buka http://localhost:8000/ (bagian Daftar): kirim kosong, HP non-dummy, pendaftaran sah, nama yang sudah ada, matikan n8n lalu Coba ulang | Pesan Indonesia untuk tiap kasus; tidak ada kata “simulasi” di layar; tombol nonaktif saat memuat; Coba ulang tidak menggandakan data | M | E-01 | Belum diuji |
 | T-41 | E1 Peserta | Di peramban buka http://localhost:8000/admin/: Tabel Peserta (cari, filter status dan AE, tambah, ubah, arsip dengan konfirmasi), Chat, Panel Staf (Kirim (simulasi)), Dashboard, pada lebar laptop 1280 px | Tampilan mengikuti template; tidak ada kata “simulasi” di layar; pesan dalam Bahasa Indonesia; tidak ada galat di konsol | M | E-02, E-03 | Belum diuji |
 | T-42 | E1 Formulir | Chat sebagai “PT Simulasi Chat Dulu” (prospek tanpa PIC), lalu daftar sebagai “PT. Chat Dulu”, lalu kirim ulang | Tetap satu baris; sektor, nama\_pic, no\_hp\_pic, kategori yang kosong terisi (tidak menimpa isi lama); empat Histori ubah\_peserta; kirim ulang berulang tanpa baris baru | O | E-01, FR-08 | Belum dijalankan (uji penuh di sesi 6) |
+| T-43 | E1 Asisten | Di peramban klik “Tanya Asisten” di pojok kanan bawah: sebut nama perusahaan, pilih saran “Apakah pendaftaran dipungut biaya?”, tanyakan “Bisakah dijamin mendapat bintang 5?”, matikan n8n lalu kirim pertanyaan dan tekan Coba ulang, tekan Esc | Bubble membuka dan menutup; jawaban membawa chip KB01 dan label Diteruskan ke staf; kegagalan tampil merah dengan Coba ulang (id sama, tanpa data ganda); tidak ada kata “simulasi” | M | FR-01, FR-03, FR-04, FR-16 | Belum diuji di peramban (perilaku sudah diperiksa di jsdom, 7 Nov 2026) |
 
 ### Matriks keterlacakan
 
@@ -655,7 +656,7 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-01 | Must | T-01 |
 | FR-02 | Must | T-04, T-05 |
 | FR-03 | Must | T-01–T-04 |
-| FR-04 | Must | T-02, T-03, T-05, T-06 |
+| FR-04 | Must | T-02, T-03, T-05, T-06, T-43 |
 | FR-05 | Should | T-07 |
 | FR-06 | Must | T-01 |
 | FR-07 | Must | T-22 |

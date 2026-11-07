@@ -98,6 +98,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - R2 (7 Nov 2026): tema situs publik memakai varian index4 template (terang, aksen biru). Nama merek di kedua situs: "Company Award Website" (judul, logo SVG buatan sendiri, footer, meta). Bagian "Tanya Asisten" dihapus dari halaman; asisten akan menjadi bubble chat mengambang di pojok kanan bawah (R3), sedangkan pendaftaran tetap berupa formulir (#daftar).
 
+- R3 (7 Nov 2026): asisten berupa bubble chat mengambang di situs publik (web/assets/js/asisten.js). Bot meminta nama perusahaan sekali lalu mengingatnya selama halaman terbuka, menawarkan tiga pertanyaan saran, dan memanggil POST /chat; kegagalan memakai Coba ulang dengan id\_permintaan yang sama. Pendaftaran tetap formulir.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |
