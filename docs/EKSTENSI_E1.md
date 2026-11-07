@@ -100,6 +100,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - R3 (7 Nov 2026): asisten berupa bubble chat mengambang di situs publik (web/assets/js/asisten.js). Bot meminta nama perusahaan sekali lalu mengingatnya selama halaman terbuka, menawarkan tiga pertanyaan saran, dan memanggil POST /chat; kegagalan memakai Coba ulang dengan id\_permintaan yang sama. Pendaftaran tetap formulir.
 
+- R4 (7 Nov 2026): sidebar admin selaras di semua lebar. Penyebab: tema menyiutkan sidebar lewat CSS di bawah 1600 px, tetapi kelas minimenu (penggeser isi dan header) baru dipasang saat jendela diubah ukurannya; msi-umum.js kini memicu resize sekali saat halaman dimuat. Seed nama “PT Simulasi …” sengaja dibiarkan (keputusan kandidat).
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

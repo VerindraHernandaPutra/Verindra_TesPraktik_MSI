@@ -81,6 +81,10 @@ window.Msi = (function () {
     return String(iso || '').replace('T', ' ').replace(/\+\d\d:\d\d$/, '');
   }
 
+  // Tema admin menyiutkan sidebar lewat CSS di bawah 1600 px, tetapi kelas "minimenu" (yang menggeser isi dan header)
+  // baru dipasang saat jendela diubah ukurannya. Picu sekali saat dimuat agar sidebar dan isi selalu selaras.
+  if (window.jQuery) window.jQuery(function () { window.jQuery(window).trigger('resize'); });
+
   return { CFG: CFG, NAMA_PERAN: NAMA_PERAN, GALAT_SAMBUNG: GALAT_SAMBUNG, el: el, bersih: bersih, buat: buat, esc: esc, peran: peran,
     simpanPeran: simpanPeran, api: api, pesan: pesan, pasangPemilihPeran: pasangPemilihPeran, formatWaktu: formatWaktu };
 })();
