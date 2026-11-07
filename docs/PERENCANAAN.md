@@ -557,7 +557,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | EB-01 | E1 | Salin template ke web/templates/onepage dan web/templates/admin | K + CC | Halaman terpakai dan aset ada di repo | E1 | Selesai |
 | EB-02 | E1 | Kolom baru Prospek (nama\_pic, no\_hp\_pic, kategori, sumber, aktif), status Terkirim (simulasi), jenis Histori baru | CC + K | Seed, WF-90, dan run\_tests konsisten; 27 uji lama tetap lulus | E-01–E-03 | Selesai |
 | EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Selesai (T-31–T-39 lulus) |
-| EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Belum |
+| EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Dibangun (web/templates/onepage/pendaftaran.html); uji peramban T-40 di sesi 6 |
 | EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Belum |
 | EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
 
@@ -642,6 +642,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-37 | E1 Peserta | Admin mengarsipkan P05, lalu mengarsipkan lagi | aktif FALSE, baris tetap ada; Histori arsip\_peserta; P05 hilang dari panel; arsip ulang ditolak 400 | O | E-02 | Lulus (7 Nov 2026, run_tests.py): P05 aktif FALSE, baris tetap 14; Histori arsip\_peserta 1; arsip ulang 400; panel total 14 menjadi 13 |
 | T-38 | E1 Kirim | Kirim draf Menunggu persetujuan, kirim sebagai admin, lalu kirim draf Siap kirim (simulasi) sebagai staf | Dua penolakan 400; draf Terkirim (simulasi); Histori kirim\_simulasi berisi nomor dummy | O | E-03 | Lulus (7 Nov 2026, run_tests.py): draf Menunggu dan peran admin ditolak 400; D0001 Terkirim (simulasi) ke 0812-0000-0003; Histori kirim\_simulasi 1 |
 | T-39 | E1 Keamanan | Cari wa.me, tel:, sms:, dan node pengirim pesan di n8n/ dan web/ | Tidak ditemukan | O | E-03, NFR-02 | Lulus (7 Nov 2026, run_tests.py): tidak ada wa.me, tel:, sms:, atau node pengirim |
+| T-40 | E1 Formulir | Buka http://localhost:8000/templates/onepage/pendaftaran.html: kirim kosong, HP non-dummy, pendaftaran sah, nama yang sudah ada, matikan n8n lalu Coba ulang | Pesan Indonesia untuk tiap kasus; label SIMULASI tampil; tombol nonaktif saat memuat; Coba ulang tidak menggandakan data | M | E-01 | Belum diuji |
 
 ### Matriks keterlacakan
 
@@ -669,7 +670,7 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-18 | Should | T-29 |
 | FR-19 | Could | T-25 |
 | FR-23 | Must | T-30 |
-| E-01 (E1) | Must | T-31, T-32, T-33, T-34 |
+| E-01 (E1) | Must | T-31, T-32, T-33, T-34, T-40 |
 | E-02 (E1) | Must | T-35, T-36, T-37 |
 | E-03 (E1) | Must | T-38, T-39 |
 
