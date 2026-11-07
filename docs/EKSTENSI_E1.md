@@ -106,6 +106,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - Tema hitam-kuning (7 Nov 2026): situs publik memakai gradien hitam dan emas dengan menimpa variabel warna template di web/assets/css/msi.css (hero, formulir, dan footer hitam; strip angka dan CTA emas; tombol emas bergradien); admin hanya diberi aksen emas (tombol utama, penomoran halaman, garis header) di web/admin/assets/css/msi-admin.css agar tabel tetap terbaca. Bubble asisten menolak sapaan dan pertanyaan sebagai nama perusahaan.
 
+- S3 (7 Nov 2026): Panel Staf dibangun ulang dari kartu bertumpuk menjadi kartu ringkasan, lima tab (Antrean eskalasi, Menunggu persetujuan, Disetujui, Siap kirim, Terkirim) berisi tabel DataTables, dan modal detail berisi tindakan sesuai status. Draf Siap kirim tanpa No. HP menampilkan peringatan, tombol Kirim nonaktif, dan tautan “Lengkapi di Tabel Peserta” (index.html?lengkapi=Pxx membuka modal ubah prospek itu). Kontrak API tidak berubah.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

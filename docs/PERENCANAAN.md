@@ -647,6 +647,7 @@ Cara: U = unit, O = otomatis lewat script, M = manual.
 | T-41 | E1 Peserta | Di peramban buka http://localhost:8000/admin/: Tabel Peserta (cari, filter status dan AE, tambah, ubah, arsip dengan konfirmasi), Chat, Panel Staf (Kirim (simulasi)), Dashboard, pada lebar laptop 1280 px | Tampilan mengikuti template; tidak ada kata “simulasi” di layar; pesan dalam Bahasa Indonesia; tidak ada galat di konsol | M | E-02, E-03 | Belum diuji |
 | T-42 | E1 Formulir | Chat sebagai “PT Simulasi Chat Dulu” (prospek tanpa PIC), lalu daftar sebagai “PT. Chat Dulu”, lalu kirim ulang | Tetap satu baris; sektor, nama\_pic, no\_hp\_pic, kategori yang kosong terisi (tidak menimpa isi lama); empat Histori ubah\_peserta; kirim ulang berulang tanpa baris baru | O | E-01, FR-08 | Lulus (7 Nov 2026, run_tests.py): P14 dari chat; sektor, nama\_pic, no\_hp\_pic, kategori dilengkapi; Histori ubah\_peserta 4; Prospek tetap 14; kirim ulang berulang |
 | T-43 | E1 Asisten | Di peramban klik “Tanya Asisten” di pojok kanan bawah: sebut nama perusahaan, pilih saran “Apakah pendaftaran dipungut biaya?”, tanyakan “Bisakah dijamin mendapat bintang 5?”, matikan n8n lalu kirim pertanyaan dan tekan Coba ulang, tekan Esc | Bubble membuka dan menutup; jawaban membawa chip KB01 dan label Diteruskan ke staf; kegagalan tampil merah dengan Coba ulang (id sama, tanpa data ganda); tidak ada kata “simulasi” | M | FR-01, FR-03, FR-04, FR-16 | Belum diuji di peramban (perilaku sudah diperiksa di jsdom, 7 Nov 2026) |
+| T-44 | E1 Panel | Di Panel Staf: klik kartu Siap kirim, buka draf prospek tanpa No. HP, klik Lengkapi di Tabel Peserta, isi data lalu kembali dan kirim | Peringatan dan tombol Kirim nonaktif; tautan membuka modal ubah prospek itu; setelah dilengkapi tombol Kirim ke nomor aktif dan draf pindah ke Terkirim | M | E-02, E-03 | Perilaku diperiksa di jsdom (7 Nov 2026); tampilan belum diuji di peramban |
 
 ### Matriks keterlacakan
 
@@ -676,7 +677,7 @@ Setiap kebutuhan Must dan Should punya minimal satu kasus uji.
 | FR-23 | Must | T-30 |
 | E-01 (E1) | Must | T-31, T-32, T-33, T-34, T-40, T-42 |
 | E-02 (E1) | Must | T-35, T-36, T-37, T-41 |
-| E-03 (E1) | Must | T-38, T-39, T-41 |
+| E-03 (E1) | Must | T-38, T-39, T-41, T-44 |
 
 ## 14. Manajemen risiko
 

@@ -177,6 +177,16 @@
       if (!p) return;
       if (this.classList.contains('aksi-ubah')) { isiForm(p); modal('modal-peserta').show(); } else mintaArsip(p);
     });
-    muat();
+    muat().then(bukaDariParameter);
   });
+
+  // Tautan "Lengkapi di Tabel Peserta" dari Panel Staf: buka modal ubah untuk prospek yang dimaksud.
+  function bukaDariParameter() {
+    var id = (new URLSearchParams(window.location.search).get('lengkapi') || '').toUpperCase();
+    if (!id) return;
+    var p = data.find(function (x) { return x.id_prospek === id; });
+    if (p) { isiForm(p); modal('modal-peserta').show(); }
+    else M.pesan('pesan-peserta', 'warning', 'Prospek ' + id + ' tidak ditemukan atau sudah diarsipkan.');
+    window.history.replaceState(null, '', window.location.pathname);
+  }
 })();

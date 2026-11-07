@@ -24,3 +24,6 @@ ul.pagination-common-style li a.active { background-color: #ffb800; border-color
 .nxl-header { border-bottom: 3px solid #ffb800; }
 .btn-primary, .btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary i { color: #141418 !important; }
 .pace .pace-progress { background: #ffb800; }
+.nav-tabs .nav-link { color: #141418; border: none; border-bottom: 3px solid transparent; }
+.nav-tabs .nav-link:hover { color: var(--msi-emas-tua); }
+.nav-tabs .nav-link.active { color: #141418; font-weight: 600; background: transparent; border-bottom: 3px solid #ffb800; }
