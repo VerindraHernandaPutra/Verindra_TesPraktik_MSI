@@ -9,9 +9,9 @@ window.Msi = (function () {
 
   function el(id) { return document.getElementById(id); }
 
-  // Nilai status di sheet memuat "(simulasi)" (Section 9); tampilan ke pengguna tidak menampilkannya.
+    // Admin menampilkan status apa adanya, termasuk "(simulasi)": pengiriman di sini hanya mengubah status.
   function bersih(teks) {
-    return String(teks == null ? '' : teks).replace(/\s*\(simulasi\)/gi, '');
+    return String(teks == null ? '' : teks);
   }
 
   function buat(tag, kelas, teks) {

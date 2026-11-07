@@ -120,8 +120,8 @@ Lingkup demo dikunci pada A1 (agent) dan A6 (CRM) dengan 4 butir KB dan 10 prosp
 | Agent layanan (A1) | Menjawab pertanyaan uji dari KB01–KB04 dengan rujukan; eskalasi pertanyaan di luar KB ke antrean staf | Menjawab topik di luar KB, negosiasi harga, menjanjikan hasil penilaian |
 | Data prospek (A6) | 10 prospek P01–P10, status pipeline, AE penanggung jawab, histori, catatan kebutuhan berlabel belum terkonfirmasi, pengingat, dashboard | Data klien nyata, nilai penjualan atau proyeksi pendapatan |
 | Draf follow-up | Draf dibuat AI dengan status Menunggu persetujuan; staf menyetujui atau menolak | Pengiriman email, WhatsApp, atau pesan nyata |
-| Antarmuka | Halaman chat, panel persetujuan, dan dashboard sederhana yang berjalan lokal | Aplikasi mobile, desain final siap produksi |
-| Akses | Pemilih peran untuk demo (Staf, AE A, AE B) berlabel simulasi | Login, SSO, atau keamanan tingkat produksi |
+| Antarmuka | Situs publik (iklan program, bubble asisten, formulir pendaftaran) dan panel admin (tabel peserta, panel staf, dashboard) yang berjalan lokal | Aplikasi mobile, desain final siap produksi |
+| Akses | Pemilih peran untuk demo (Staf, AE A, AE B, Admin) dan panel admin terbuka di /admin/ tanpa login; keduanya hanya contoh tampilan | Login, SSO, atau keamanan tingkat produksi |
 | Infrastruktur | n8n lokal (Docker atau npx) dan Google Sheets berisi data dummy | Server berbayar, domain, deployment publik |
 | Tugas pendamping A2–A5 | Rancangan atau contoh terbatas berlabel di laporan A7 | Dibangun sebagai sistem penuh |
 
@@ -136,7 +136,7 @@ Lingkup demo dikunci pada A1 (agent) dan A6 (CRM) dengan 4 butir KB dan 10 prosp
 ### Batasan
 
 - **BT-01** Batas pengumpulan mengikuti hasil konfirmasi tanggal (lihat Section 0).
-- **BT-02** Semua nama, aturan, dan kutipan adalah simulasi dan diberi label SIMULASI di setiap tampilan.
+- **BT-02** Semua nama, aturan, dan kutipan adalah simulasi. Sejak 7 Nov 2026 situs publik tidak memakai kata “simulasi” di isinya agar terasa nyata, tetapi footer kedua situs menyatakan “Situs demo untuk tes praktik; seluruh data fiktif”. Di panel admin, tombol dan status pengiriman tetap berlabel “(simulasi)”. README, rekaman, dan laporan A7 menyatakan sifat simulasi secara eksplisit.
 - **BT-03** Tidak ada kontak nyata ke perusahaan mana pun, termasuk perusahaan yang namanya mirip prospek fiktif.
 - **BT-04** Tidak ada data rahasia, kredensial, atau akses produksi di bukti yang diserahkan.
 - **BT-05** Bukti harus bisa dibuka penilai tanpa hak edit publik dan tanpa akses produksi.
@@ -181,7 +181,7 @@ Sistem melayani lima peran simulasi, dan hanya staf layanan yang bisa meloloskan
 
 &#91;embedded content: peta aktor · 5 peran, 3 bagian sistem\]
 
-Calon peserta hanya berinteraksi lewat halaman chat; peran internal masuk lewat pemilih peran berlabel simulasi, bukan login.
+Calon peserta berinteraksi lewat situs publik (bubble asisten dan formulir pendaftaran); peran internal memakai panel admin di /admin/ dengan pemilih peran contoh, bukan login.
 
 ### Peran pengguna
 
@@ -252,7 +252,7 @@ Dua belas kebutuhan non-fungsional mengatur seberapa aman, andal, dan mudah dira
 | --- | --- | --- | --- | --- |
 | NFR-01 | Akurasi sumber | Semua jawaban uji menyebut rujukan KB yang benar; tidak ada janji, harga, atau tanggal tanpa dasar KB | Kasus uji agent di Section 13 lulus semua | Must |
 | NFR-02 | Keamanan kredensial | API key dan akses Google hanya disimpan di credential store n8n atau file .env yang tidak di-commit | Pemeriksaan repo dan screenshot sebelum dikirim | Must |
-| NFR-03 | Privasi data | Hanya data dummy; label SIMULASI tampil di setiap layar | Pemeriksaan visual tiap layar | Must |
+| NFR-03 | Privasi data | Hanya data dummy; sifat simulasi dinyatakan di footer kedua situs, pada tombol dan status pengiriman di panel admin, serta di README, rekaman, dan laporan | Pemeriksaan visual tiap layar | Must |
 | NFR-04 | Keandalan | Permintaan yang diulang tidak menambah baris; setiap kegagalan tertangkap jalur error | Uji duplikasi dan uji gagal simpan | Must |
 | NFR-05 | Ketertelusuran | Setiap perubahan data dan keputusan persetujuan punya jejak siapa dan kapan | Sheet histori terisi setelah uji | Must |
 | NFR-06 | Kinerja | Jawaban agent tampil dalam 10 detik atau kurang pada kondisi normal | Stopwatch saat uji, dicatat di Section 13 | Should |
@@ -484,7 +484,7 @@ Halaman web hanya berbicara dengan n8n lewat kontrak ini, jadi bagian depan dan 
 
 ## 11. Desain UI/UX
 
-Antarmuka berupa satu halaman web dengan tiga tab: Chat, Panel staf, dan Dashboard. Label SIMULASI, rujukan KB, status eskalasi, dan pesan gagal selalu terlihat, sehingga penilai bisa memeriksa perilaku sistem hanya dari layar.
+Antarmuka terdiri dari situs publik (iklan program, bubble asisten, formulir pendaftaran) dan panel admin (Tabel Peserta, Panel Staf, Dashboard). Sifat simulasi pada footer dan label pengiriman admin, rujukan KB, status eskalasi, dan pesan gagal selalu terlihat, sehingga penilai bisa memeriksa perilaku sistem hanya dari layar.
 
 &#91;embedded content: mock-up 3 tab · chat, panel staf, dashboard\]
 
@@ -560,7 +560,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 | EB-02 | E1 | Kolom baru Prospek (nama\_pic, no\_hp\_pic, kategori, sumber, aktif), status Terkirim (simulasi), jenis Histori baru | CC + K | Seed, WF-90, dan run\_tests konsisten; 27 uji lama tetap lulus | E-01–E-03 | Selesai |
 | EB-03 | E1 | WF-06: POST /pendaftaran, POST /peserta, POST /draf/kirim | CC | Perusahaan lama tidak dobel; arsip tidak menghapus baris; kirim ditolak sebelum Siap kirim | E-01–E-03 | Selesai (T-31–T-39 lulus) |
 | EB-04 | E1 | Formulir pendaftaran di one-page template | CC | Pendaftaran baru menghasilkan P11 | E-01 | Selesai otomatis (run_tests 37/37, jsdom, tangkapan layar Edge, 7 Nov 2026); uji peramban T-40, T-41, T-43 oleh kandidat |
-| EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; label SIMULASI tampil | E-02, E-03 | Selesai otomatis (run_tests 37/37, jsdom, tangkapan layar Edge, 7 Nov 2026); uji peramban T-40, T-41, T-43 oleh kandidat |
+| EB-05 | E1 | Migrasi UI ke template admin, tabel peserta, tombol Kirim (simulasi) | CC | Tabel mendukung cari, tambah, ubah, arsip; tombol dan status pengiriman berlabel (simulasi) | E-02, E-03 | Selesai otomatis (run_tests 37/37, jsdom, tangkapan layar Edge, 7 Nov 2026); uji peramban T-40, T-41, T-43 oleh kandidat |
 | EB-06 | E1 | Rekaman 1 menit dan screenshot tambahan | K | Formulir, tabel, dan status Terkirim (simulasi) terekam | E1 | Belum |
 | EB-07 | E1 | Siklus tiket eskalasi (Opsi B): POST /tiket (ambil, jawab lewat draf, selesai), tutup otomatis saat draf jawaban terkirim, kolom Status dan Usia serta tindakan di Panel Staf | CC | Tiket bisa diambil, dijawab, dan diselesaikan; jawaban mengikuti alur persetujuan; Histori ubah\_tiket tercatat | US layanan, FR-04 | Dibangun; uji unit dan live lulus (7 Nov 2026) |
 
@@ -569,7 +569,7 @@ Pelaksana CC = Claude Code di VS Code; K = kandidat (akun Google, kredensial, kl
 - Kriteria “Selesai bila” terpenuhi dan sudah diuji, bukan hanya ditulis.
 - Perubahan di-commit dengan pesan berawalan ID item, misalnya “BL-10: upsert prospek anti-dobel”.
 - Tidak ada API key, token, atau kata sandi di file yang di-commit.
-- Label SIMULASI tetap tampil di layar yang terdampak.
+- Pernyataan simulasi (footer dan label pengiriman admin) tetap ada di layar yang terdampak.
 - Hasil uji terkait dicatat di Section 13.
 
 ### Checklist sprint review
@@ -745,7 +745,7 @@ Untuk penggunaan nyata di MSI, sistem ini masih memerlukan autentikasi pengguna,
 - [ ] File workflow JSON di folder n8n/ tidak memuat key
 - [ ] Rekaman ditonton ulang: tidak ada layar kredensial n8n yang terbuka
 - [ ] Screenshot dipotong atau diburamkan bila memuat email pribadi atau ID akun
-- [ ] Label SIMULASI terlihat di setiap layar bukti
+- [ ] Footer “Situs demo” dan label “(simulasi)” pada pengiriman admin terlihat di layar bukti
 - [ ] Spreadsheet dan folder bukti berakses lihat saja
 
 ## 16. Deliverable & kode bukti
@@ -804,7 +804,7 @@ NamaKandidat_TesPraktik_MSI/
 
 | Waktu | Yang diperlihatkan | Uji |
 | --- | --- | --- |
-| 0:00–0:30 | Label SIMULASI, arsitektur singkat, sheet Konfigurasi | — |
+| 0:00–0:30 | Pernyataan bahwa ini simulasi (lisan dan footer demo), arsitektur singkat, sheet Konfigurasi | — |
 | 0:30–1:30 | Tiga pertanyaan soal: sponsor, bintang 5, harga dan tanggal | T-01, T-02, T-03 |
 | 1:30–2:00 | Upaya membobol agent | T-06 |
 | 2:00–2:40 | Panel staf: antrean, setujui satu draf, tolak satu draf | T-17, T-18 |
@@ -886,7 +886,7 @@ Sumber kebenaran: docs/PERENCANAAN.md. Jika ada yang tidak tertulis di sana, tan
 - Nama sheet, kolom, dan nilai status persis seperti Section 9.
 - Kontrak webhook persis seperti Section 10.
 - Aturan agent AR-01–AR-08 dan pemeriksa PJ-01–PJ-04 persis seperti Section 7.
-- Semua teks tampilan dan pesan dalam Bahasa Indonesia; label SIMULASI selalu tampil.
+- Semua teks tampilan dan pesan dalam Bahasa Indonesia; sifat simulasi dinyatakan di footer dan pada label pengiriman admin.
 - Konfigurasi dibaca dari .env atau config.js, tidak ditulis langsung di kode.
 
 ## Larangan

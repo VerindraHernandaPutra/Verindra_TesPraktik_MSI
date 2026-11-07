@@ -223,7 +223,7 @@ function prosesKirim(D, m, waktu) {
     respons: {
       status: 'ok', id_draf: m.id_draf, status_draf: ke, no_tujuan: hp,
       tiket_selesai: tutup ? tiketDariDraf(draf) : null,
-      pesan: `Draf ${m.id_draf} ditandai terkirim ke ${hp}.` + (tutup ? ` Tiket ${tiketDariDraf(draf)} ditandai selesai.` : ''),
+      pesan: `Draf ${m.id_draf} ditandai Terkirim (simulasi) ke ${hp}; tidak ada pesan yang benar-benar dikirim.` + (tutup ? ` Tiket ${tiketDariDraf(draf)} ditandai selesai.` : ''),
     },
   };
 }

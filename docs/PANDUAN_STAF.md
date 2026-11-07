@@ -1,20 +1,28 @@
-# Panduan Staf dan AE: Layanan Awards (SIMULASI MSI)
+# Panduan Staf dan AE: Layanan Awards (Company Award Website)
 
 > **SIMULASI.** Semua perusahaan dan data bersifat fiktif. Tidak ada pesan yang dikirim ke pihak mana pun.
 
 Halaman: **http://localhost:8000** (situs publik). Panel admin: **http://localhost:8000/admin/** (menu di sisi kiri: Tabel Peserta, Panel Staf, Dashboard). Pilihan peran adalah simulasi, bukan login.
 
-## Tab Panel staf (untuk staf layanan)
+## Panel Staf (untuk staf layanan)
 
-**Antrean eskalasi** berisi pertanyaan yang tidak boleh dijawab penuh oleh asisten AI: tarif, jaminan penghargaan, jadwal spesifik, atau topik di luar acuan. Setiap tiket menampilkan pertanyaan, perusahaan, dan alasan eskalasi. Tindak lanjuti tiket dengan menghubungi calon peserta lewat jalur resmi setelah verifikasi.
+Halaman ini punya lima kartu ringkasan dan lima tab. Klik sebuah baris untuk membuka detail, atau pakai **ikon aksi** di kolom Aksi untuk langkah cepat.
 
-**Draf menunggu persetujuan** berisi draf pesan yang disusun AI, baik dari percakapan chat maupun dari catatan AE.
+**Antrean eskalasi** berisi pertanyaan yang tidak boleh dijawab penuh oleh asisten AI: tarif, jaminan penghargaan, jadwal spesifik, atau topik di luar acuan. Setiap tiket menampilkan pertanyaan, perusahaan, status (Baru, Ditangani), dan usia tiket.
+1. **Ambil tiket** agar rekan lain tahu tiket ini sedang ditangani.
+2. **Jawab lewat draf**: tulis jawaban untuk calon peserta. Jawaban menjadi draf baru di tab *Menunggu persetujuan* (badge "Jawaban staf") dan mengikuti alur persetujuan di bawah. Saat draf itu terkirim, tiketnya selesai otomatis.
+3. **Tandai selesai** bila tiket sudah ditangani di luar sistem. Catatan penyelesaian wajib diisi. Tiket yang Selesai tidak bisa dibuka lagi.
+
+**Menunggu persetujuan** berisi draf pesan yang disusun AI (dari chat atau catatan AE) atau jawaban staf.
 1. Baca isi draf dan pertanyaan asalnya.
-2. Klik **Setujui** bila isinya benar dan sopan.
-3. Klik **Tolak** bila perlu diperbaiki. Kolom catatan wajib diisi, misalnya "Mohon sebutkan bahwa staf akan menghubungi".
-4. Draf yang disetujui pindah ke **Draf disetujui**. Klik **Tandai Siap kirim (simulasi)** bila siap. Tombol ini hanya menandai status; tidak ada pesan yang terkirim.
+2. **Setujui** bila isinya benar dan sopan.
+3. **Tolak** bila perlu diperbaiki. Catatan wajib diisi, misalnya "Mohon sebutkan bahwa staf akan menghubungi".
 
-Draf tidak pernah bisa ditandai Siap kirim sebelum disetujui staf.
+**Disetujui**: klik **Tandai Siap kirim (simulasi)** bila siap. Draf tidak pernah bisa ditandai Siap kirim sebelum disetujui staf.
+
+**Siap kirim (simulasi)**: klik **Kirim (simulasi) ke nomor** untuk memindahkan draf ke Terkirim. Tombol ini hanya mengubah status dan mencatat Histori; **tidak ada pesan yang benar-benar dikirim**. Bila prospek belum punya No. HP PIC, tombol Kirim nonaktif dan muncul tautan **Lengkapi di Tabel Peserta**.
+
+**Terkirim (simulasi)**: riwayat draf yang sudah ditandai terkirim, beserta nomor tujuan.
 
 ## Tab Dashboard (untuk AE dan admin)
 

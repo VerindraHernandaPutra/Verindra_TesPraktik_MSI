@@ -9,7 +9,7 @@
 
   var JENIS = ['antrean', 'menunggu', 'disetujui', 'siap', 'terkirim'];
   var SUMBER_API = { antrean: 'antrean', menunggu: 'draf_menunggu', disetujui: 'draf_disetujui', siap: 'draf_siap_kirim', terkirim: 'draf_terkirim' };
-  var JUDUL = { antrean: 'Antrean eskalasi', menunggu: 'Menunggu persetujuan', disetujui: 'Disetujui', siap: 'Siap kirim', terkirim: 'Terkirim' };
+  var JUDUL = { antrean: 'Antrean eskalasi', menunggu: 'Menunggu persetujuan', disetujui: 'Disetujui', siap: 'Siap kirim (simulasi)', terkirim: 'Terkirim (simulasi)' };
   var IKON = { antrean: 'feather-alert-circle', menunggu: 'feather-clock', disetujui: 'feather-check-circle', siap: 'feather-send', terkirim: 'feather-check-square' };
   var WARNA = { antrean: 'danger', menunggu: 'warning', disetujui: 'info', siap: 'primary', terkirim: 'success' };
   var tabel = {};
@@ -69,9 +69,9 @@
       } else if (jenis === 'menunggu') {
         a.push(ikonAksi('setuju', 'feather-check', 'Setujui'), ikonAksi('tolak', 'feather-x', 'Tolak (perlu catatan)'));
       } else if (jenis === 'disetujui') {
-        a.push(ikonAksi('siap', 'feather-flag', 'Tandai siap kirim'));
+        a.push(ikonAksi('siap', 'feather-flag', 'Tandai Siap kirim (simulasi)'));
       } else if (jenis === 'siap') {
-        a.push(d.no_hp_pic ? ikonAksi('kirim', 'feather-send', 'Kirim ke ' + M.esc(d.no_hp_pic)) : ikonAksi('lengkapi', 'feather-user-plus', 'Lengkapi No. HP di Tabel Peserta'));
+        a.push(d.no_hp_pic ? ikonAksi('kirim', 'feather-send', 'Kirim (simulasi) ke ' + M.esc(d.no_hp_pic)) : ikonAksi('lengkapi', 'feather-user-plus', 'Lengkapi No. HP di Tabel Peserta'));
       }
       a.push(ikonAksi('detail', 'feather-eye', 'Lihat detail'));
       return '<div class="hstack gap-2 justify-content-end">' + a.join('') + '</div>';
@@ -135,7 +135,7 @@
     if (aksi === 'setuju') return putuskan(t, d.id_draf, 'setuju', '', 'pesan-panel');
     if (aksi === 'siap') return putuskan(t, d.id_draf, 'siap_kirim', '', 'pesan-panel');
     if (aksi === 'kirim') {
-      if (!window.confirm('Kirim draf ' + d.id_draf + ' ke ' + d.no_hp_pic + '?')) return;
+      if (!window.confirm('Kirim (simulasi) draf ' + d.id_draf + ' ke ' + d.no_hp_pic + '? Hanya status yang berubah; tidak ada pesan yang dikirim.')) return;
       return kirim(t, d, 'pesan-panel');
     }
   }
@@ -218,11 +218,11 @@
         }),
         tombol('Setujui', 'btn-primary', function (t) { putuskan(t, d.id_draf, 'setuju', catatan.value); }));
     } else if (jenis === 'disetujui') {
-      kaki.append(tutup, tombol('Tandai siap kirim', 'btn-primary', function (t) { putuskan(t, d.id_draf, 'siap_kirim', ''); }));
+      kaki.append(tutup, tombol('Tandai Siap kirim (simulasi)', 'btn-primary', function (t) { putuskan(t, d.id_draf, 'siap_kirim', ''); }));
     } else if (jenis === 'siap') {
       if (d.no_hp_pic) {
         isi.append(bagian('Tujuan', d.no_hp_pic));
-        kaki.append(tutup, tombol('Kirim ke ' + d.no_hp_pic, 'btn-primary', function (t) { kirim(t, d); }));
+        kaki.append(tutup, tombol('Kirim (simulasi) ke ' + d.no_hp_pic, 'btn-primary', function (t) { kirim(t, d); }));
       } else {
         M.pesan('pesan-detail', 'warning', 'No. HP PIC untuk ' + (d.nama_perusahaan || d.id_prospek) + ' belum ada, jadi draf belum bisa dikirim.');
         var lengkapi = buat('a', 'btn btn-primary', 'Lengkapi di Tabel Peserta');

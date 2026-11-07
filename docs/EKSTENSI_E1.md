@@ -110,6 +110,8 @@ sebelum menulis kode. Setelah itu kerjakan EB-02 dan EB-03.
 
 - Opsi B (7 Nov 2026): tiket eskalasi kini punya siklus Baru → Ditangani → Selesai lewat POST /tiket. Staf bisa mengambil tiket, menjawab lewat draf (draf baru Menunggu persetujuan bertanda “Jawaban staf atas Txxxx” yang mengikuti alur persetujuan biasa), atau menandai selesai dengan catatan. Saat draf jawaban terkirim, tiket ditutup otomatis dalam batch yang sama. Tidak ada kolom sheet baru; jejak di Histori jenis ubah\_tiket.
 
+- Penyesuaian label (7 Nov 2026, setelah membaca panduan A1–A6): tombol dan status pengiriman di panel admin kembali berlabel “Kirim (simulasi)”, “Siap kirim (simulasi)”, dan “Terkirim (simulasi)” agar tidak terbaca sebagai pengiriman nyata (soal: jangan mengirim pesan nyata). Footer kedua situs memuat “Situs demo untuk tes praktik; seluruh data fiktif”. Lokasi karangan (Jakarta) dihapus dari situs publik; kategori dan tahapan penilaian dicatat sebagai konten contoh.
+
 ## 8. Rencana sesi dan model
 
 | Sesi | Isi | Model |

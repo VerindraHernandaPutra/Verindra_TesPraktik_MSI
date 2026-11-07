@@ -13,7 +13,7 @@ Sumber kebenaran: docs/PERENCANAAN.md. Jika ada yang tidak tertulis di sana, tan
 - Nama sheet, kolom, dan nilai status persis seperti Section 9.
 - Kontrak webhook persis seperti Section 10.
 - Aturan agent AR-01–AR-08 dan pemeriksa PJ-01–PJ-04 persis seperti Section 7.
-- Semua teks tampilan dan pesan dalam Bahasa Indonesia. Sejak 7 Nov 2026 (keputusan kandidat), kata "simulasi" tidak ditampilkan di situs agar demo terasa nyata; keterbukaan bahwa ini simulasi dijaga di README, laporan A7, dan rekaman.
+- Semua teks tampilan dan pesan dalam Bahasa Indonesia. Sejak 7 Nov 2026 (keputusan kandidat), kata "simulasi" tidak ditampilkan di isi situs publik agar demo terasa nyata. Keterbukaan dijaga lewat footer kedua situs ("Situs demo untuk tes praktik; seluruh data fiktif"), label "(simulasi)" pada tombol dan status pengiriman di panel admin, serta README, laporan A7, dan rekaman.
 - Konfigurasi dibaca dari .env atau config.js, tidak ditulis langsung di kode.
 
 ## Larangan
