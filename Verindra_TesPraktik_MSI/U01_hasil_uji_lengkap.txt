@@ -1,0 +1,45 @@
+HASIL UJI SIMULASI MSI (run_tests.py) | 2026-11-07 22:13:49
+
+ID    HASIL WAKTU   CATATAN
+T-22  LULUS 2.7s    per status {'Baru': 3, 'Kualifikasi': 3, 'Follow-up': 3, 'Penawaran draf': 1}, per AE {'AE A': 5, 'AE B': 5}
+T-24  LULUS 2.8s    ae_a melihat P01, P03, P05, P07, P09
+T-23  LULUS 3.4s    ditandai {'P03': 'Terlewat', 'P07': 'Jatuh tempo hari ini'}; P04/P10 kosong: True
+T-01  LULUS 6.5s    rujukan KB03, eskalasi tidak, C0001
+T-02  LULUS 5.9s    rujukan KB04, eskalasi ya, tiket dibuat, C0002
+T-03  LULUS 6.4s    rujukan KB02,KB04, eskalasi ya, tiket dibuat, C0003
+T-04  LULUS 7.5s    rujukan KB01, eskalasi tidak, C0004
+T-05  LULUS 6.2s    rujukan -, eskalasi ya, tiket dibuat, C0005
+T-06  LULUS 6.6s    rujukan KB04, eskalasi ya, tiket dibuat, C0006
+T-07  LULUS         uji unit pemeriksa: 23 lulus, 0 gagal (termasuk 'Paket Rp10 juta, dijamin bintang 5')
+T-08  LULUS         3 kali: [(('KB03',), False)]
+T-09  LULUS         Prospek 10; Histori duplikat_terdeteksi untuk dua permintaan: 2
+T-10  LULUS 6.0s    dikenali sebagai P03; Prospek 10
+T-12  LULUS 3.1s    Histori H0025 AE A: Baru -> Kualifikasi
+T-13  LULUS 2.8s    HTTP 400 "Prospek P01 milik AE A; AE B tidak boleh mengubah statusnya."; P01 tetap Kualifikasi
+T-14  LULUS 2.7s    HTTP 400 "Status tidak valid. Pilih salah satu: Baru, Kualifikasi, Fol"
+T-15  LULUS         D0001 untuk P03 berstatus Menunggu persetujuan
+T-16  LULUS 2.6s    HTTP 400; D0001 tetap Menunggu persetujuan
+T-17  LULUS 3.2s    D0001: Disetujui -> Siap kirim (simulasi); Histori draf_diputuskan 2
+T-18  LULUS 3.3s    D0002 Ditolak; catatan tersimpan: True
+T-30  LULUS 5.3s    D0013 di panel staf: True; kebutuhan P03 Belum terkonfirmasi; Histori draf_dibuat 1
+T-19  LULUS 5.9s    HTTP 502 gagal; Percakapan 12->12; Log_Error E0001 node Simpan Jawaban
+T-20  LULUS 5.7s    coba ulang HTTP 200; Percakapan untuk id ini: 1
+T-21  LULUS 2.7s    berulang=True; jumlah baris semua sheet sama: True
+T-11  LULUS 5.5s    P11 Baru, Belum terkonfirmasi, AE A, sumber=chat, aktif=TRUE; Histori prospek_baru 1
+T-31  LULUS 3.1s    HP non-dummy HTTP 400; tanpa centang simulasi HTTP 400; data tidak berubah: True
+T-32  LULUS 3.1s    P12 sumber=formulir aktif=TRUE; Histori pendaftaran 1; coba ulang berulang=True, tanpa baris baru: True
+T-33  LULUS 3.5s    dikenali P03: "PT Simulasi Tani Makmur sudah terdaftar sebagai P03; data tidak ditambah."; Prospek tetap 12; Histori duplikat 1
+T-34  LULUS 6.9s    P13; chat ok rujukan ['KB01']; Percakapan 1
+T-42  LULUS 3.4s    P14 dari chat; dilengkapi ['sektor', 'nama_pic', 'no_hp_pic', 'kategori']; Histori ubah_peserta 4; Prospek tetap 14; kirim ulang berulang=True, tanpa baris baru: True
+T-35  LULUS 3.3s    P15 sumber=admin; Histori pendaftaran 1; kirim ulang berulang=True; dobel P02 HTTP 400; tanpa baris baru: True
+T-36  LULUS 3.1s    AE A ubah P01 ['nama_pic', 'no_hp_pic']; Histori ubah_peserta 2; AE B ditolak HTTP 400
+T-37  LULUS 3.4s    P05 aktif=FALSE, baris tetap 15; Histori arsip_peserta 1; arsip ulang HTTP 400; panel total 15->14
+T-38  LULUS 3.3s    D0003 Menunggu ditolak HTTP 400; peran admin HTTP 400; D0001 -> Terkirim (simulasi) ke 0812-0000-0003; Histori kirim_simulasi 1
+T-45  LULUS 3.8s    T0001 dijawab lewat D0018; jawab ganda HTTP 400; kirim menutup tiket: T0001; status Selesai; Histori ubah_tiket 2
+T-46  LULUS 3.2s    T0002: ambil 200, ambil ulang 400, selesai tanpa catatan 400, selesai 200, ubah setelah selesai 400, peran admin 400; hilang dari antrean: True
+T-39  LULUS         repo n8n/ dan web/ (situs publik dan admin): tanpa wa.me, tel:, sms:, atau node pengirim pesan
+T-26  LULUS         rata-rata T-01 (3 kali): 5.9 s; 5.6, 6.6, 5.4
+T-28  LULUS         repo: tanpa pola kunci, nilai .env tidak ada di repo, .env tidak dilacak git
+39/39 lulus | model claude-haiku-5-5 | 2026-11-07 22:13 s.d. 22:21 | durasi 8 menit 0 detik
+
+Tidak dijalankan script (manual): T-25 ekspor CSV, T-29 ubah KB di sheet, pemeriksaan screenshot T-28.

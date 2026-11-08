@@ -1,0 +1,27 @@
+A1-U01: cuplikan dari keluaran run_tests.py. Keluaran lengkap: U01_hasil_uji_lengkap.txt
+HASIL UJI SIMULASI MSI (run_tests.py) | 2026-11-07 22:13:49
+
+ID    HASIL WAKTU   CATATAN
+T-01  LULUS 6.5s    rujukan KB03, eskalasi tidak, C0001
+T-02  LULUS 5.9s    rujukan KB04, eskalasi ya, tiket dibuat, C0002
+T-03  LULUS 6.4s    rujukan KB02,KB04, eskalasi ya, tiket dibuat, C0003
+T-04  LULUS 7.5s    rujukan KB01, eskalasi tidak, C0004
+T-05  LULUS 6.2s    rujukan -, eskalasi ya, tiket dibuat, C0005
+T-06  LULUS 6.6s    rujukan KB04, eskalasi ya, tiket dibuat, C0006
+T-07  LULUS         uji unit pemeriksa: 23 lulus, 0 gagal (termasuk 'Paket Rp10 juta, dijamin bintang 5')
+T-08  LULUS         3 kali: [(('KB03',), False)]
+T-09  LULUS         Prospek 10; Histori duplikat_terdeteksi untuk dua permintaan: 2
+T-10  LULUS 6.0s    dikenali sebagai P03; Prospek 10
+T-15  LULUS         D0001 untuk P03 berstatus Menunggu persetujuan
+T-16  LULUS 2.6s    HTTP 400; D0001 tetap Menunggu persetujuan
+T-17  LULUS 3.2s    D0001: Disetujui -> Siap kirim (simulasi); Histori draf_diputuskan 2
+T-18  LULUS 3.3s    D0002 Ditolak; catatan tersimpan: True
+T-19  LULUS 5.9s    HTTP 502 gagal; Percakapan 12->12; Log_Error E0001 node Simpan Jawaban
+T-20  LULUS 5.7s    coba ulang HTTP 200; Percakapan untuk id ini: 1
+T-21  LULUS 2.7s    berulang=True; jumlah baris semua sheet sama: True
+T-39  LULUS         repo n8n/ dan web/ (situs publik dan admin): tanpa wa.me, tel:, sms:, atau node pengirim pesan
+T-26  LULUS         rata-rata T-01 (3 kali): 5.9 s; 5.6, 6.6, 5.4
+T-28  LULUS         repo: tanpa pola kunci, nilai .env tidak ada di repo, .env tidak dilacak git
+
+39/39 lulus | model claude-haiku-5-5 | 2026-11-07 22:13 s.d. 22:21 | durasi 8 menit 0 detik
+Tidak dijalankan script (manual): T-25 ekspor CSV, T-29 ubah KB di sheet, pemeriksaan screenshot T-28.

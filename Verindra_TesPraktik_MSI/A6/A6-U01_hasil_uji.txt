@@ -1,0 +1,21 @@
+A6-U01: cuplikan dari keluaran run_tests.py. Keluaran lengkap: U01_hasil_uji_lengkap.txt
+HASIL UJI SIMULASI MSI (run_tests.py) | 2026-11-07 22:13:49
+
+ID    HASIL WAKTU   CATATAN
+T-22  LULUS 2.7s    per status {'Baru': 3, 'Kualifikasi': 3, 'Follow-up': 3, 'Penawaran draf': 1}, per AE {'AE A': 5, 'AE B': 5}
+T-24  LULUS 2.8s    ae_a melihat P01, P03, P05, P07, P09
+T-23  LULUS 3.4s    ditandai {'P03': 'Terlewat', 'P07': 'Jatuh tempo hari ini'}; P04/P10 kosong: True
+T-09  LULUS         Prospek 10; Histori duplikat_terdeteksi untuk dua permintaan: 2
+T-10  LULUS 6.0s    dikenali sebagai P03; Prospek 10
+T-12  LULUS 3.1s    Histori H0025 AE A: Baru -> Kualifikasi
+T-13  LULUS 2.8s    HTTP 400 "Prospek P01 milik AE A; AE B tidak boleh mengubah statusnya."; P01 tetap Kualifikasi
+T-14  LULUS 2.7s    HTTP 400 "Status tidak valid. Pilih salah satu: Baru, Kualifikasi, Fol"
+T-15  LULUS         D0001 untuk P03 berstatus Menunggu persetujuan
+T-16  LULUS 2.6s    HTTP 400; D0001 tetap Menunggu persetujuan
+T-17  LULUS 3.2s    D0001: Disetujui -> Siap kirim (simulasi); Histori draf_diputuskan 2
+T-18  LULUS 3.3s    D0002 Ditolak; catatan tersimpan: True
+T-30  LULUS 5.3s    D0013 di panel staf: True; kebutuhan P03 Belum terkonfirmasi; Histori draf_dibuat 1
+T-11  LULUS 5.5s    P11 Baru, Belum terkonfirmasi, AE A, sumber=chat, aktif=TRUE; Histori prospek_baru 1
+
+39/39 lulus | model claude-haiku-5-5 | 2026-11-07 22:13 s.d. 22:21 | durasi 8 menit 0 detik
+Tidak dijalankan script (manual): T-25 ekspor CSV, T-29 ubah KB di sheet, pemeriksaan screenshot T-28.
