@@ -3,12 +3,10 @@
 > **SIMULASI.** Semua data, nama perusahaan, dan aturan di repo ini fiktif. Tidak ada pesan nyata yang dikirim.
 
 Demo AI agent layanan awards (A1) yang terhubung ke CRM prospek (A6), dibangun dengan n8n dan Google Sheets.
-Rencana lengkap: [docs/PERENCANAAN.md](docs/PERENCANAAN.md).
 
 ## Struktur repo
 
 ```
-docs/       Dokumen perencanaan dan panduan staf
 seed/       Data awal CSV, satu file per sheet Google Spreadsheet
 n8n/        Workflow JSON (workflows/), system prompt (prompts/), kode Code node (code/)
 web/        Situs publik (index.html, template Eventify) dan panel admin (admin/, template Duralux), config.js

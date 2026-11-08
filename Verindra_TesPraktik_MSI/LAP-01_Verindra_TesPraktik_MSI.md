@@ -31,7 +31,6 @@ Seluruh materi adalah SIMULASI TES. Nama perusahaan, isi KB, nomor HP (pola 0812
 | A3-R01 | Rancangan aplikasi penilaian | [A2-A5/A3-R01_rancangan_penilaian.md](A2-A5/A3-R01_rancangan_penilaian.md) |
 | A4-R01 | Contoh briefing satu halaman | [A2-A5/A4-R01_briefing.md](A2-A5/A4-R01_briefing.md) |
 | A5-R01 | Contoh artikel dan rancangan layout | [A2-A5/A5-R01_artikel_layout.md](A2-A5/A5-R01_artikel_layout.md) |
-| DOC-01 | Dokumen perencanaan | [docs/PERENCANAAN.md](../docs/PERENCANAAN.md) |
 
 Repo ini tidak menyertakan file template pihak ketiga (Eventify, Duralux) karena lisensinya tidak mengizinkan penyebaran, jadi halaman web tidak bisa dijalankan dari repo. Tampilan ditinjau lewat rekaman dan screenshot; kode buatan sendiri tetap ada di `web/`.
 
@@ -53,7 +52,7 @@ Tidak ada kata sandi, API key, atau akses produksi di repo ini.
 | Pembanding | Dibanding menjawab manual: konsisten dan tercatat, tetapi selisih waktu kerja belum diukur. Dibanding chatbot tanpa KB: setiap jawaban punya sumber yang bisa dicek |
 | Peran pribadi | Lihat A0. Kandidat memutuskan alur persetujuan dan aturan eskalasi, lalu meninjau hasil |
 | Pemeliharaan | Admin mengubah KB di sheet lalu menjalankan T-01 sampai T-06. `run_tests.py` dijalankan setiap prompt atau workflow berubah. Log_Error ditinjau mingguan |
-| Perkiraan biaya | Uji dan demo sekitar 150 pertanyaan: sekitar US$0,07. Gambaran 1.000 pertanyaan per bulan: sekitar US$0,45 dengan Haiku 5.5. Asumsi rinci di DOC-01 Section 17; server produksi tidak diestimasi |
+| Perkiraan biaya | Uji dan demo sekitar 150 pertanyaan: sekitar US$0,07. Gambaran 1.000 pertanyaan per bulan: sekitar US$0,45 dengan Haiku 5.5. Asumsi: dua panggilan model per pertanyaan, sekitar 2.500 token masukan dan 400 token keluaran; server produksi tidak diestimasi |
 | Batasan | Berjalan lokal, belum produksi. Pemilih peran dan `/admin` tanpa login hanya contoh, bukan pengamanan. Satu pengguna; ID bersamaan bisa bentrok. AI bisa keliru, sehingga dijaga pemeriksa dan persetujuan staf |
 
 **Hasil uji soal (A1-U01)**
