@@ -59,6 +59,10 @@ scripts/    Script Python: uji otomatis dan reset seed
    Hasil tersimpan di `bukti/hasil_uji_<waktu>.txt` dan `.json`. Uji unit tanpa n8n: `node --test "n8n/code/*.test.js"`.
    Reset saja: `python scripts/reset_seed.py`.
 
+## Catatan repo publik
+
+Repo ini tidak menyertakan file template pihak ketiga (Eventify, Duralux) karena lisensinya tidak mengizinkan penyebaran, jadi halaman web tidak bisa dijalankan dari repo. Tampilan ditinjau lewat rekaman dan screenshot; kode buatan sendiri tetap ada di `web/`.
+
 ## Keamanan
 
 - API key dan akses Google hanya disimpan di credential store n8n.

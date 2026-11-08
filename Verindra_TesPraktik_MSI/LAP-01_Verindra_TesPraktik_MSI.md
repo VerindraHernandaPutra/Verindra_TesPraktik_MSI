@@ -21,7 +21,7 @@ Seluruh materi adalah SIMULASI TES. Nama perusahaan, isi KB, nomor HP (pola 0812
 
 | Kode | Isi | Lokasi |
 | --- | --- | --- |
-| A1-D01 | Rekaman demo | Tautan di isian A8 formulir |
+| A1-D01 | Rekaman demo 6 menit 26 detik (A1 dan bagian CRM A6) | [A1-D01_rekaman_demo.mp4](https://github.com/VerindraHernandaPutra/Verindra_TesPraktik_MSI/releases/download/bukti/A1-D01_rekaman_demo.mp4) |
 | A1-U01 | Hasil uji agent, pemeriksa, keandalan | [A1/A1-U01_hasil_uji.txt](A1/A1-U01_hasil_uji.txt) |
 | A1-S01 | Screenshot berurutan | [A1/](A1/) |
 | A1-W01 | Workflow, system prompt, kode pemeriksa | [n8n/workflows](../n8n/workflows), [n8n/prompts](../n8n/prompts), [n8n/code](../n8n/code) |
@@ -33,7 +33,11 @@ Seluruh materi adalah SIMULASI TES. Nama perusahaan, isi KB, nomor HP (pola 0812
 | A5-R01 | Contoh artikel dan rancangan layout | [A2-A5/A5-R01_artikel_layout.md](A2-A5/A5-R01_artikel_layout.md) |
 | DOC-01 | Dokumen perencanaan | [docs/PERENCANAAN.md](../docs/PERENCANAAN.md) |
 
-Cara menjalankan demo lokal ada di [README.md](../README.md). Tidak ada kata sandi, API key, atau akses produksi di repo ini.
+Repo ini tidak menyertakan file template pihak ketiga (Eventify, Duralux) karena lisensinya tidak mengizinkan penyebaran, jadi halaman web tidak bisa dijalankan dari repo. Tampilan ditinjau lewat rekaman dan screenshot; kode buatan sendiri tetap ada di `web/`.
+
+Pada rekaman, uji duplikasi memakai prospek baru P11. Uji memasukkan P03 kembali dibuktikan oleh A1-S01_04, A6-S01_04, dan T-09.
+
+Tidak ada kata sandi, API key, atau akses produksi di repo ini.
 
 ## A1: AI agent layanan dan prospek awards (solusi utama)
 
