@@ -759,10 +759,10 @@ Demo menghasilkan sembilan bukti berkode, semuanya disimpan di satu folder berna
 | --- | --- | --- | --- | --- |
 | A1-D01 | Rekaman demo 5 menit atau kurang: tanya-jawab, eskalasi, pencatatan, persetujuan draf, uji dobel, uji gagal | BL-20 | A1, A8 | Belum dibuat |
 | A1-U01 | Keluaran run\_tests.py untuk agent, pemeriksa, dan keandalan (T-01–T-08, T-19–T-21), plus perbandingan Ollama (T-27) | BL-18, BL-19 | A0, A1 | Dibuat (8 Nov 2026) |
-| A1-S01 | Screenshot berurutan: chip KB, label eskalasi, antrean staf, draf menunggu, pesan gagal dan coba ulang | BL-20 | A1 | Belum dibuat |
+| A1-S01 | Screenshot berurutan: chip KB, label eskalasi, antrean staf, draf menunggu, pesan gagal dan coba ulang | BL-20 | A1 | Dibuat (8 Nov 2026): Verindra_TesPraktik_MSI/A1/ |
 | A1-W01 | Workflow JSON WF-01 dan WF-05, system prompt, dan kode pemeriksa dari repo | BL-20 | A1, A7 | Dibuat: n8n/ di repo |
 | A6-D01 | Bagian rekaman A1-D01 yang memperlihatkan pipeline, histori, pengingat, dashboard, dan draf penawaran dari catatan AE (penanda waktu dicantumkan) | BL-20 | A6 | Belum dibuat |
-| A6-S01 | Screenshot dashboard 3/3/3/1, sheet Prospek berisi 10 prospek unik, sheet Histori | BL-20 | A6 | Belum dibuat |
+| A6-S01 | Screenshot dashboard 3/3/3/1, sheet Prospek berisi 10 prospek unik, sheet Histori | BL-20 | A6 | Dibuat (8 Nov 2026): Verindra_TesPraktik_MSI/A6/ |
 | A6-U01 | Keluaran run\_tests.py untuk CRM, draf, dan dashboard (T-09–T-18, T-22–T-25, T-30) | BL-18 | A6 | Dibuat (8 Nov 2026) |
 | DOC-01 | Dokumen perencanaan ini, diekspor ke PDF | F1 | A0, A7 | Dibuat: docs/PERENCANAAN.md di repo |
 | LAP-01 | Laporan Bagian A–C bernama NamaKandidat\_TesPraktik\_MSI | BL-21 | A7 | Draf dibuat (8 Nov 2026); tautan belum diperiksa tanpa login |

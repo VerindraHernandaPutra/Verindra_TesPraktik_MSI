@@ -1,0 +1,27 @@
+A6-S01: salinan isi sheet demo (data fiktif), diambil 8 Nov 2026 setelah P03 dimasukkan kembali.
+
+PROSPEK (10 baris)
+id_prospek | nama_perusahaan | sektor | ae | status | aktif
+P01 | PT Simulasi Surya Reka | Manufaktur | AE A | Baru | TRUE
+P02 | PT Simulasi Laut Biru | Logistik | AE B | Kualifikasi | TRUE
+P03 | PT Simulasi Tani Makmur | Agribisnis | AE A | Follow-up | TRUE
+P04 | PT Simulasi Bina Dana | Keuangan | AE B | Penawaran draf | TRUE
+P05 | PT Simulasi Mitra Sehat | Kesehatan | AE A | Baru | TRUE
+P06 | PT Simulasi Digital Karya | Teknologi | AE B | Kualifikasi | TRUE
+P07 | PT Simulasi Tirta Lestari | Air bersih | AE A | Follow-up | TRUE
+P08 | PT Simulasi Daya Hijau | Energi | AE B | Baru | TRUE
+P09 | PT Simulasi Niaga Sentosa | Perdagangan | AE A | Kualifikasi | TRUE
+P10 | PT Simulasi Cipta Sarana | Konstruksi | AE B | Follow-up | TRUE
+
+HISTORI (10 baris)
+id_histori | waktu | id_prospek | aktor | jenis | nilai_lama | nilai_baru | catatan
+H0001 | 2026-11-08T16:38:19+07:00 | P03 | Agent WF-01 | duplikat_terdeteksi |  |  | Prospek sudah ada, tidak ditambah; identitas masuk: "PT Simulasi Tani Makmur"; id_permintaan=tanya-bb53762b-73b6-4154-ab5b-ee6af8e1a69b
+H0002 | 2026-11-08T16:38:19+07:00 | P03 | Agent WF-01 | draf_dibuat |  | D0001 | Draf follow-up dari C0001; id_permintaan=tanya-bb53762b-73b6-4154-ab5b-ee6af8e1a69b
+H0003 | 2026-11-08T16:38:28+07:00 | P03 | Agent WF-01 | duplikat_terdeteksi |  |  | Prospek sudah ada, tidak ditambah; identitas masuk: "PT Simulasi Tani Makmur"; id_permintaan=tanya-9ad76dc1-75c5-4c16-bb3b-825a2dfba650
+H0004 | 2026-11-08T16:38:28+07:00 | P03 | Agent WF-01 | draf_dibuat |  | D0002 | Draf follow-up dari C0002; id_permintaan=tanya-9ad76dc1-75c5-4c16-bb3b-825a2dfba650
+H0005 | 2026-11-08T16:38:40+07:00 | P03 | Agent WF-01 | duplikat_terdeteksi |  |  | Prospek sudah ada, tidak ditambah; identitas masuk: "PT Simulasi Tani Makmur"; id_permintaan=tanya-fc29046e-a18a-4731-9a3d-506789f31fc7
+H0006 | 2026-11-08T16:38:40+07:00 | P03 | Agent WF-01 | draf_dibuat |  | D0003 | Draf follow-up dari C0003; id_permintaan=tanya-fc29046e-a18a-4731-9a3d-506789f31fc7
+H0007 | 2026-11-08T16:38:50+07:00 | P03 | Agent WF-01 | duplikat_terdeteksi |  |  | Prospek sudah ada, tidak ditambah; identitas masuk: "PT. Simulasi Tani Makmur"; id_permintaan=tanya-06d9bcb5-d523-4b6f-b287-fcc754f2641e
+H0008 | 2026-11-08T16:38:50+07:00 | P03 | Agent WF-01 | draf_dibuat |  | D0004 | Draf follow-up dari C0004; id_permintaan=tanya-06d9bcb5-d523-4b6f-b287-fcc754f2641e
+H0009 | 2026-11-08T16:39:07+07:00 | P03 | Agent WF-01 | duplikat_terdeteksi |  |  | Prospek sudah ada, tidak ditambah; identitas masuk: "PT. Simulasi Tani Makmur"; id_permintaan=tanya-b54464a8-d557-40b3-907f-db053ad4d24b
+H0010 | 2026-11-08T16:39:07+07:00 | P03 | Agent WF-01 | draf_dibuat |  | D0005 | Draf follow-up dari C0005; id_permintaan=tanya-b54464a8-d557-40b3-907f-db053ad4d24b
